@@ -1,2 +1,5 @@
-add_library(kepler kepler.c)
+add_library(kepler
+    kepler.c
+    universal_var.c
+    )
 
