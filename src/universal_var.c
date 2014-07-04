@@ -2,21 +2,21 @@
 #include <float.h>
 #include <math.h>
 
-double dot(const double *a, const double *b) {
+static double dot(const double *a, const double *b) {
     return a[0]*b[0] + a[1]*b[1] + a[2]*b[2];
 }
 
-double mag(const double *a) {
+static double mag(const double *a) {
     return sqrt(dot(a, a));
 }
 
-bool zero(double x) {
+static bool zero(double x) {
     return x*x < DBL_EPSILON;
 }
 
-double sign(double x) { return x < 0 ? -1.0 : 1.0; }
-double square(double x) { return x*x; }
-double cube(double x) { return x*x*x; }
+static double sign(double x) { return x < 0 ? -1.0 : 1.0; }
+static double square(double x) { return x*x; }
+static double cube(double x) { return x*x*x; }
 
 
 double universal_var_C(double z) {
@@ -124,8 +124,8 @@ double universal_var_guess_x(
     double alpha,
     double rv, double r0,
     double t) {
-    if(zero(alpha))
-        return 0.0 / 0.0; // XXX: solve X from parabolic anomaly?!
+    //if(zero(alpha))
+        //return 0.0 / 0.0; // XXX: solve X from parabolic anomaly?!
 
     if(alpha < 0.0) {   // hyperbolic trajectory
         double sqrta = sqrt(-1.0 / alpha);
@@ -138,7 +138,7 @@ double universal_var_guess_x(
 }
 
 void universal_var_fg(
-    double mu,
+    double sqrtmu,
     double r0,
     double t,
     double x, double z,
@@ -147,7 +147,7 @@ void universal_var_fg(
     (void)z;
 
     *f = 1.0 - square(x)/r0 * C;
-    *g = t - cube(x)/mu * S;
+    *g = t - cube(x)/sqrtmu * S;
 }
 
 void universal_var_fgdot(
@@ -157,8 +157,64 @@ void universal_var_fgdot(
     double x, double z,
     double C, double S,
     double *fdot, double *gdot) {
-    *fdot = 1.0 - square(x)/r * C;
-    *gdot = sqrtmu/(r0*r) * x * (z * S - 1.0);
+    *fdot = sqrtmu/(r0*r) * x * (z*S - 1.0);
+    *gdot = 1.0 - square(x)/r * C;
+}
+
+void universal_var_fg_E(
+    double sqrtmu,
+    double a,
+    double e,
+    double r0,
+    double delta_t, double delta_E,
+    double *f, double *g) {
+    // XXX: parabolic trajectory!
+    if(e > 1.0) {
+        *f = 1.0 - a/r0 * (1.0 - cos(delta_E));
+        *g = delta_t - (pow(-a, 3.0/2.0) / sqrtmu) * (sinh(delta_E) - delta_E);
+    } else {
+        *f = 1.0 - a/r0 * (1.0 - cos(delta_E));
+        *g = delta_t - (pow(a, 3.0/2.0) / sqrtmu) * (delta_E - sin(delta_E));
+    }
+}
+
+void universal_var_fgdot_E(
+    double sqrtmu,
+    double a,
+    double e,
+    double r0,
+    double r,
+    double delta_t, double delta_E,
+    double *fdot, double *gdot) {
+    (void)delta_t;
+    // XXX: parabolic trajectory!
+    if(e > 1.0) {
+        *fdot = -sqrtmu*sqrt(-a)*sinh(delta_E) / (r*r0);
+        *gdot = 1.0 - a/r * (1.0 - cosh(delta_E));
+    } else {
+        *fdot = -sqrtmu*sqrt(a)*sin(delta_E)/(r*r0);
+        *gdot = 1.0 - a/r * (1.0 - cos(delta_E));
+    }
+}
+
+void universal_var_fg_f(
+    double sqrtmu,
+    double p,
+    double r0, double r,
+    double delta_f,
+    double *f, double *g) {
+    *f = 1.0 - r/p * (1.0 - cos(delta_f));
+    *g = r*r0 * sin(delta_f) / (sqrtmu * sqrt(p));
+}
+
+void universal_var_fgdot_f(
+    double sqrtmu,
+    double p,
+    double r0, double r,
+    double delta_f,
+    double *fdot, double *gdot) {
+    *fdot = sqrtmu/sqrt(p) * tan(delta_f/2.0) * ((1.0 - cos(delta_f))/p - 1.0/r - 1.0/r0);
+    *gdot = 1.0 - r0/p * (1.0 - cos(delta_f));
 }
 
 void universal_var(
@@ -179,7 +235,7 @@ void universal_var(
     double S = universal_var_Sseries(z);
 
     double f, g;
-    universal_var_fg(mu, r0, t, x, z, C, S, &f, &g);
+    universal_var_fg(sqrtmu, r0, t, x, z, C, S, &f, &g);
 
     for(int i = 0; i < 3; ++i)
         pos[i] = f*pos0[i] + g*vel0[i];

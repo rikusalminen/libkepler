@@ -7,6 +7,7 @@ double universal_var_Cseries(double z);
 double universal_var_Sseries(double z);
 double universal_var_dCdz(double z, double C, double S);
 double universal_var_dSdz(double z, double C, double S);
+
 double universal_var_t(
     double sqrtmu,
     double alpha,
@@ -29,8 +30,9 @@ double universal_var_guess_x(
     double alpha,
     double rv, double r0,
     double t);
+
 void universal_var_fg(
-    double mu,
+    double sqrtmu,
     double r0,
     double t,
     double x, double z,
@@ -43,5 +45,38 @@ void universal_var_fgdot(
     double x, double z,
     double C, double S,
     double *fdot, double *gdot);
+void universal_var_fg_E(
+    double sqrtmu,
+    double a,
+    double e,
+    double r0,
+    double delta_t, double delta_E,
+    double *f, double *g);
+void universal_var_fgdot_E(
+    double sqrtmu,
+    double a,
+    double e,
+    double r0,
+    double r,
+    double delta_t, double delta_E,
+    double *fdot, double *gdot);
+void universal_var_fg_f(
+    double sqrtmu,
+    double p,
+    double r0, double r,
+    double delta_f,
+    double *f, double *g);
+void universal_var_fgdot_f(
+    double sqrtmu,
+    double p,
+    double r0, double r,
+    double delta_f,
+    double *fdot, double *gdot);
+
+void universal_var(
+    double mu,
+    const double *pos0, const double *vel0,
+    double t,
+    double *pos, double *vel);
 
 #endif
