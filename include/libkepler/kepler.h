@@ -1,6 +1,8 @@
 #ifndef LIBKEPLER_KEPLER_H
 #define LIBKEPLER_KEPLER_H
 
+#include <stdbool.h>
+
 struct kepler_elements {
     double semi_latus_rectum;
     double eccentricity;
@@ -18,10 +20,19 @@ double kepler_anomaly_true_to_eccentric(double e, double f);
 double kepler_anomaly_true_to_mean(double e, double f);
 double kepler_anomaly_mean_to_true(double e, double M);
 double kepler_anomaly_dEdM(double e, double E);
+
 bool kepler_orbit_parabolic(const struct kepler_elements *elements);
 bool kepler_orbit_hyperbolic(const struct kepler_elements *elements);
 bool kepler_orbit_closed(const struct kepler_elements *elements);
 bool kepler_orbit_circular(const struct kepler_elements *elements);
+
+double kepler_orbit_semi_latus_rectum(const struct kepler_elements *elements);
+double kepler_orbit_eccentricity(const struct kepler_elements *elements);
+double kepler_orbit_mean_motion(const struct kepler_elements *elements);
+double kepler_orbit_inclination(const struct kepler_elements *elements);
+double kepler_orbit_longitude_of_ascending_node(const struct kepler_elements *elements);
+double kepler_orbit_argument_of_periapsis(const struct kepler_elements *elements);
+double kepler_orbit_periapsis_time(const struct kepler_elements *elements);
 double kepler_orbit_semi_major_axis(const struct kepler_elements *elements);
 double kepler_orbit_semi_minor_axis(const struct kepler_elements *elements);
 double kepler_orbit_gravity_parameter(const struct kepler_elements *elements);
@@ -41,6 +52,7 @@ void kepler_orbit_normal(const struct kepler_elements *elements, double *dir);
 void kepler_orbit_tangent(const struct kepler_elements *elements, double *dir);
 void kepler_orbit_bitangent(const struct kepler_elements *elements, double *dir);
 void kepler_orbit_matrix(const struct kepler_elements *elements, double *mat);
+
 void kepler_elements_from_state(
     double mu,
     const double *pos,

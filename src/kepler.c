@@ -159,6 +159,34 @@ bool kepler_orbit_circular(const struct kepler_elements *elements) {
     return zero(elements->eccentricity);
 }
 
+double kepler_orbit_semi_latus_rectum(const struct kepler_elements *elements) {
+    return elements->semi_latus_rectum;
+}
+
+double kepler_orbit_eccentricity(const struct kepler_elements *elements) {
+    return elements->eccentricity;
+}
+
+double kepler_orbit_mean_motion(const struct kepler_elements *elements) {
+    return elements->mean_motion;
+}
+
+double kepler_orbit_inclination(const struct kepler_elements *elements) {
+    return elements->inclination;
+}
+
+double kepler_orbit_longitude_of_ascending_node(const struct kepler_elements *elements) {
+    return elements->longitude_of_ascending_node;
+}
+
+double kepler_orbit_argument_of_periapsis(const struct kepler_elements *elements) {
+    return elements->argument_of_periapsis;
+}
+
+double kepler_orbit_periapsis_time(const struct kepler_elements *elements) {
+    return elements->periapsis_time;
+}
+
 double kepler_orbit_semi_major_axis(const struct kepler_elements *elements) {
     if(kepler_orbit_parabolic(elements))
         return INFINITY;

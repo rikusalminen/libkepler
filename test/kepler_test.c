@@ -138,13 +138,13 @@ void orbit_from_state_test(double *params, int num_params, void *extra_args, str
     kepler_elements_from_state(mu, pos, vel, t0, &elements);
 
     ASSERT(
-        isfinite(elements.semi_latus_rectum) &&
-        isfinite(elements.eccentricity) &&
-        isfinite(elements.mean_motion) &&
-        isfinite(elements.inclination) &&
-        isfinite(elements.longitude_of_ascending_node) &&
-        isfinite(elements.argument_of_periapsis) &&
-        isfinite(elements.periapsis_time),
+        isfinite(kepler_orbit_semi_latus_rectum(&elements)) &&
+        isfinite(kepler_orbit_eccentricity(&elements)) &&
+        isfinite(kepler_orbit_mean_motion(&elements)) &&
+        isfinite(kepler_orbit_inclination(&elements)) &&
+        isfinite(kepler_orbit_longitude_of_ascending_node(&elements)) &&
+        isfinite(kepler_orbit_argument_of_periapsis(&elements)) &&
+        isfinite(kepler_orbit_periapsis_time(&elements)),
         "All elements not NaN or Inf");
 
     ASSERT_EQF(kepler_orbit_gravity_parameter(&elements), mu,
