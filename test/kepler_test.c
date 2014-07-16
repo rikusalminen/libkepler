@@ -297,6 +297,8 @@ void orbit_from_elements_test(double *params, int num_params, void *extra_args, 
     double x1 = -1.0 + params[3] * 2.0;
     double f1 = maxf * x1;
     double E1 = kepler_anomaly_true_to_eccentric(e, f1);
+    double t1 = kepler_orbit_periapsis_time(&elements) +
+        kepler_anomaly_eccentric_to_mean(e, E1) / n;
 
     const int states_size = 2 * 2 * 3; // 2 x position,velocity x vec3
     double state_data[states_size];
@@ -404,4 +406,29 @@ void orbit_from_elements_test(double *params, int num_params, void *extra_args, 
 
         }
     }
+
+    double pos[3], vel[3], acc[3];
+    kepler_elements_to_state_t(&elements, t1, pos, vel);
+    double r = mag(pos);
+    for(int i = 0; i < 3; ++i)
+        acc[i] = - mu/(r*r*r) * pos[i];
+
+    double dt = 1.0e-3 * M_PI/180.0 / n;
+    double posplus[3], velplus[3], posminus[3], velminus[3];
+    kepler_elements_to_state_t(&elements, t1-dt, posminus, velminus);
+    kepler_elements_to_state_t(&elements, t1+dt, posplus, velplus);
+
+    double dx[3], dv[3], delta_x[3], delta_v[3];
+    for(int i = 0; i < 3; ++i) {
+        dx[i] = 2.0 * vel[i] * dt;
+        dv[i] = 2.0 * acc[i] * dt;
+
+        delta_x[i] = posplus[i] - posminus[i];
+        delta_v[i] = velplus[i] - velminus[i];
+    }
+
+    ASSERT(eqv3(dx, delta_x),
+        "v = dx/dt");
+    ASSERT(eqv3(dv, delta_v),
+        "a = dv/dt");
 }

@@ -41,6 +41,17 @@ static void transpose3x3(double *m)
     }
 }
 
+static void matrix_vector_product(const double *m, const double *v, double *x) {
+    for(int i = 0; i < 3; ++i) {
+        x[i] = 0.0;
+
+        for(int j = 0; j < 3; ++j) {
+            x[i] += m[3 * i + j] * v[j];
+            //x[i] += m[3 * j + i] * v[j];
+        }
+    }
+}
+
 static inline double kepler_iter1(double e, double M, double x) {
     return M + e * sin(x);
 }
@@ -484,5 +495,13 @@ void kepler_elements_to_state_t(
     // eccentric anomaly
     double E = kepler_anomaly_mean_to_eccentric(elements->eccentricity, M);
 
-    kepler_elements_to_state_E(elements, E, pos, vel);
+    // position and velocity in orbital plane
+    double pos2d[3], vel2d[3];
+    kepler_elements_to_state_E(elements, E, pos2d, vel2d);
+
+    // position and velocity in 3d
+    double matrix[9];
+    kepler_orbit_matrix(elements, matrix);
+    matrix_vector_product(matrix, pos2d, pos);
+    matrix_vector_product(matrix, vel2d, vel);
 }
