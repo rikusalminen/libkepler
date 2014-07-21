@@ -1,1 +1,5 @@
 build
+test/libkepler-test
+*.o
+*.d
+*.a
