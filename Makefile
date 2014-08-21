@@ -1,4 +1,3 @@
-CC=cc
 CFLAGS=-std=gnu99
 CFLAGS+=-W -Wall
 CFLAGS+=-O3 -ffast-math -g
