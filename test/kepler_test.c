@@ -19,8 +19,13 @@ static double mag(const double *a) {
     return sqrt(dot(a, a));
 }
 
+static double sign(double x) { return x < 0 ? -1.0 : 1.0; }
 static double square(double x) { return x*x; }
 static double cube(double x) { return x*x*x; }
+
+static double clamp(double min, double max, double x) {
+    return (x < min ? min : (x > max ? max : x));
+}
 
 static void matrix_vector_product(const double *m, const double *v, double *x) {
     for(int i = 0; i < 3; ++i) {
@@ -113,7 +118,7 @@ void anomaly_test(double *params, int num_params, void *extra_args, struct numte
 void orbit_from_state_test(double *params, int num_params, void *extra_args, struct numtest_ctx *test_ctx) {
     (void)extra_args;
 
-    ASSERT(num_params == 6, "");
+    ASSERT(num_params == 7, "");
 
     struct kepler_elements elements = { 0, 0, 0, 0, 0, 0, 0};
 
@@ -122,7 +127,11 @@ void orbit_from_state_test(double *params, int num_params, void *extra_args, str
     double v_circ = sqrt(mu / r0), v_esc = sqrt(2.0 * mu / r0);
     double v0 = v_circ + (v_esc - v_circ) * 2.0 * params[2];
 
-    double r = r0, v = v0;
+    double h0 = r0 * v0;
+    double visviva0 = v0*v0/2.0 - mu/r0;
+    double e2 = 1.0 + (2.0 * visviva0 * h0*h0)/(mu*mu);
+    double e = ZEROF(e2) ? 0.0 : sqrt(e2);
+    double p = r0 * (1.0 + e);
 
     double mat[9];
     double rot[3];
@@ -130,9 +139,39 @@ void orbit_from_state_test(double *params, int num_params, void *extra_args, str
         rot[i] = -M_PI + 2.0*M_PI * params[3+i];
     rotation_matrix_euler(rot[0], rot[1], rot[2], mat);
 
-    // TODO: start above periapsis
-    double pos[3] = { r * mat[0], r * mat[1], r * mat[2] };
-    double vel[3] = { v * mat[3], v * mat[4], v * mat[5] };
+    double maxf = e > 1.0 ?
+        acos(1.0/e) :       // hyperbolic
+        (ZEROF(e-1.0) ?
+            4*M_PI/5 :      // parabolic
+            M_PI);          // closed orbit
+    double f0 = maxf * (-1.0 + 2.0 * params[6]);
+
+    double r = p / (1.0 + e * cos(f0));
+    double a = p / (1.0 - e2);
+    double v = ZEROF(e-1.0) ?
+        sqrt(mu * (2.0 / r)) :
+        sqrt(mu * (2.0 / r - 1.0 / a));
+
+    double rx = r * cos(f0), ry = r * sin(f0);
+
+    // flight path angle
+    double phi = sign(f0) * acos(clamp(-1.0, 1.0, (r0*v0)/(r*v)));
+    double vt = v * cos(phi), vr = v * sin(phi);
+    double vx = vr * cos(f0) + vt * -sin(f0);
+    double vy = vr * sin(f0) + vt * cos(f0);
+
+    double pos[3] = {
+        rx * mat[0] + ry * mat[3],
+        rx * mat[1] + ry * mat[4],
+        rx * mat[2] + ry * mat[5]
+    };
+
+    double vel[3] = {
+        vx * mat[0] + vy * mat[3],
+        vx * mat[1] + vy * mat[4],
+        vx * mat[2] + vy * mat[5]
+    };
+
     double t0 = 0.0;
 
     kepler_elements_from_state(mu, pos, vel, t0, &elements);
@@ -157,10 +196,21 @@ void orbit_from_state_test(double *params, int num_params, void *extra_args, str
     ASSERT_RANGEF(elements.argument_of_periapsis, -M_PI, M_PI,
         "Argument of periapsis with range -pi..pi");
 
+    ASSERT_EQF(kepler_orbit_semi_latus_rectum(&elements), p,
+        "Semi-latus rectum matches");
+    ASSERT((ZEROF(e2) && ZEROF(pow(kepler_orbit_eccentricity(&elements), 2))) ||
+        EQF(kepler_orbit_eccentricity(&elements), e),
+        "Eccentricity matches");
+    ASSERT_EQF(kepler_orbit_specific_angular_momentum(&elements), h0,
+        "Specific relative angular momentum matches");
+    if(!kepler_orbit_parabolic(&elements)) // XXX: rounding errors near escape
+        ASSERT_EQF(kepler_orbit_specific_orbital_energy(&elements), visviva0,
+            "Specific orbital energy matches");
+
     ASSERT(elements.eccentricity >= 0.0,
         "Eccentricity is greater than zero");
 
-    ASSERT(v >= v_esc || kepler_orbit_closed(&elements),
+    ASSERT(v0 >= v_esc || kepler_orbit_closed(&elements),
         "Closed orbit if less than escape velocity");
 
     ASSERT_LTF(kepler_orbit_periapsis(&elements), r,
@@ -258,6 +308,12 @@ void orbit_from_state_test(double *params, int num_params, void *extra_args, str
         double M = kepler_orbit_mean_anomaly_at_time(&elements, t0);
         double E = kepler_anomaly_mean_to_eccentric(elements.eccentricity, M);
         double f = kepler_anomaly_eccentric_to_true(elements.eccentricity, E);
+
+        ASSERT(ZEROF(e2) ||
+            (ZEROF(f0*f0) && ZEROF(f*f)) ||
+            (ZEROF(fabs(f0)-M_PI) && ZEROF(fabs(f)-M_PI)) ||
+            EQF(f, f0),
+            "True anomaly identity");
 
         if(pass == 0)
             kepler_elements_to_state_E(&elements, E, pos2, vel2);
