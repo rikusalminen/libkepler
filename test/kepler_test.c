@@ -220,7 +220,11 @@ void orbit_from_state_test(double *params, int num_params, void *extra_args, str
     }
 
     if(kepler_orbit_parabolic(&elements)) {
-        // TODO: test parabolic orbits
+        ASSERT(ZEROF(kepler_orbit_specific_orbital_energy(&elements)),
+            "Parabolic orbits have zero orbital energy");
+
+        ASSERT_EQF(2.0 * kepler_orbit_periapsis(&elements), kepler_orbit_semi_latus_rectum(&elements),
+            "Parabolic orbit periapsis is half semi latus rectum");
     }
 
     if(kepler_orbit_hyperbolic(&elements)) {
