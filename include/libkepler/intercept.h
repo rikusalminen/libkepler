@@ -12,6 +12,12 @@ struct intercept {
     double relative_velocity[3];
 };
 
+int intersect_orbit(
+    const struct kepler_elements *orbit1,
+    const struct kepler_elements *orbit2,
+    double threshold,
+    double *fs);
+
 bool intercept_orbit(
     const struct kepler_elements *orbit1,
     const struct kepler_elements *orbit2,

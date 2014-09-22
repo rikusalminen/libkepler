@@ -78,7 +78,9 @@ int intersect_orbit(
     cross(nor2, nor1, nodes); // points to ascending node where orbit1 moves above orbit2
     double N = mag(nodes);
     bool coplanar = zero(N);
-    double rel_incl = asin(clamp(-1.0, 1.0, N));
+    double rel_incl = sign(dot(nor1, nor2)) * asin(clamp(-1.0, 1.0, N));
+
+    //printf("rel_incl: %lf\n", rel_incl);
 
     // Non-coplanar orbits
     double f_an = 0.0, f_dn = M_PI, delta_f = M_PI/2.0;
@@ -149,8 +151,7 @@ int intersect_orbit(
 
     if((fs[0] > fs[1]) && !(fs[2] > fs[3])) { swap(fs+0, fs+2); swap(fs+1, fs+3); }
 
-
- /*
+    /*
     printf("f1: %2.3lf\t f2: %2.3lf\t f_an: %2.3lf\t f_dn: %2.3lf\t delta_f: %2.3lf\n",
         f1, f2, f_an, f_dn, delta_f);
     printf("f11: %2.3lf\t f12: %2.3lf\t f21: %2.3lf\t f22: %2.3lf\n",
