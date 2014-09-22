@@ -239,6 +239,14 @@ void orbit_from_state_test(double *params, int num_params, void *extra_args, str
     ASSERT_EQF(mag(h), kepler_orbit_specific_angular_momentum(&elements),
         "Specific relative angular momentum");
 
+    double pos_pe[3], vel_pe[3];
+    kepler_elements_to_state_t(&elements, kepler_orbit_periapsis_time(&elements), pos_pe, vel_pe);
+
+    ASSERT_EQF(mag(pos_pe), kepler_orbit_periapsis(&elements),
+        "Periapsis radius");
+    ASSERT_EQF(mag(vel_pe), kepler_orbit_periapsis_vel(&elements),
+        "Periapsis velocity");
+
     if(kepler_orbit_closed(&elements)) {
         ASSERT_LTF(kepler_orbit_periapsis(&elements), kepler_orbit_apoapsis(&elements),
             "Apoapsis is greater than periapsis");
@@ -260,6 +268,16 @@ void orbit_from_state_test(double *params, int num_params, void *extra_args, str
 
         ASSERT(0.0 > kepler_orbit_specific_orbital_energy(&elements),
             "Closed orbits have negative specific orbital energy");
+
+        double pos_ap[3], vel_ap[3];
+        kepler_elements_to_state_t(&elements,
+                kepler_orbit_periapsis_time(&elements) + kepler_orbit_period(&elements)/2.0,
+                pos_ap, vel_ap);
+
+        ASSERT_EQF(mag(pos_ap), kepler_orbit_apoapsis(&elements),
+            "Apoapsis radius");
+        ASSERT_EQF(mag(vel_ap), kepler_orbit_apoapsis_vel(&elements),
+            "Apoapsis velocity");
     }
 
     if(kepler_orbit_circular(&elements)) {
