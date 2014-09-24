@@ -130,6 +130,8 @@ void intercept_test(double *params, int num_params, void *extra_args, struct num
     struct kepler_elements orbits[2] = { orbit1, orbit2 };
 
     //printf("reli: %lf\n", reli);
+    double pos2[3];
+    kepler_elements_to_state_t(&orbit2, t0, pos2, vel2);
 
     for(int i = 0; i < 2; ++i) {
         double fs[4];
@@ -141,11 +143,26 @@ void intercept_test(double *params, int num_params, void *extra_args, struct num
         ASSERT(intersects == 1 || intersects == 2,
             "One or two intersects");
 
-        if(intersects == 0) continue; // XXX: 
+        if(intersects == 0)
+            continue; // XXX: this should not happen
 
-        double f = i ? f1 : f2;
-        ASSERT((LTF(fs[0], f) && LTF(f, fs[1])) ||
-            (intersects == 2 && LTF(fs[2], f) && LTF(f, fs[3])),
-            "True anomaly is within intersect range");
+        double f = i == 0 ? f1 : f2;
+
+        ASSERT(LTF(fs[0], fs[1]) || (fs[0]*fs[1] < 0.0),
+            "True anomaly range is sane");
+        ASSERT(intersects < 2 || (LTF(fs[2], fs[3]) || (fs[2]*fs[3] < 0.0)),
+            "True anomaly range is sane");
+
+        ASSERT(
+            // intersect1
+            (fs[0] <= fs[1] && LTF(fs[0], f) && LTF(f, fs[1])) ||
+            // intersect 1 near apoapsis
+            (fs[0] > fs[1] && (LTF(fs[0], f) || LTF(f, fs[1]))) ||
+            (intersects == 2 && (
+            // intersect2
+                (fs[2] <= fs[3] && LTF(fs[2], f) && LTF(f, fs[3])) ||
+            // intersect2 near apoapsis
+                (fs[2] > fs[3] && (LTF(fs[2], f) || LTF(f, fs[3]))))),
+            "True anomaly within range");
     }
 }

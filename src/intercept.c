@@ -85,9 +85,18 @@ int intersect_orbit(
     // Non-coplanar orbits
     double f_an = 0.0, f_dn = M_PI, delta_f = M_PI/2.0;
     if(coplanar) {
-        if(zero(f1)) { fs[0] = -f2; fs[1] = f2; return 1; }       // apoapsis
-        else if(!(f2 < M_PI)) { fs[0] = f1; fs[2] = -f1; return 1; } // periapsis
-        else { fs[0] = -f2; fs[1] = -f1; fs[2] = f1; fs[3] = f2; return 2; }
+        if(zero(f1)) {
+            // intersect near periapsis
+            fs[0] = -f2; fs[1] = f2;
+            return 1;
+        } else if(kepler_orbit_closed(orbit1) && !(f2 < M_PI)) {
+            // intersect near apoapsis
+            fs[0] = f1; fs[1] = -f1;
+            return 1;
+        } else {
+            fs[0] = -f2; fs[1] = -f1; fs[2] = f1; fs[3] = f2;
+            return 2;
+        }
     } else {
         double tan1[3], bit1[3];
         kepler_orbit_tangent(orbit1, tan1);
@@ -120,7 +129,7 @@ int intersect_orbit(
             fs[1] = fs[3];
             return 1;
         }
-    } else if(!(f2 < M_PI)) {
+    } else if(kepler_orbit_closed(orbit1) && !(f2 < M_PI)) {
         // intersect near apoapsis (f < -f1, f > f1)
         fs[0] = angle_clamp(max(min(f_an, f_dn)-delta_f, -f1));
         fs[1] = min(min(f_an, f_dn)+delta_f, -f1);
