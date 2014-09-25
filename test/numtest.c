@@ -7,7 +7,6 @@
 #include "numtest.h"
 
 struct numtest_args {
-    int steps;
     uint64_t first, last;
     int random, random_seed;
 
@@ -64,6 +63,38 @@ void numtest_assert(
     va_end(va);
 }
 
+static double test_pattern_1d(uint64_t seed) {
+    if(seed < 2)
+        return (double)seed;
+
+    seed -= 1;
+
+    int level = 64 - __builtin_clzl(seed);
+    uint64_t numer = 1 + (seed - (1ull << (level - 1))) * 2;
+    uint64_t denom = 1ull << level;
+
+    return numer / (double)denom;
+}
+
+static void test_pattern(uint64_t seed, int dim, double *params) {
+    if(dim == 1) {
+        params[0] = test_pattern_1d(seed);
+        return;
+    }
+
+    uint64_t seeds[dim];
+    for(int i = 0; i < dim; ++i)
+        seeds[i] = 0;
+
+    // interpret seed as Morton code
+    for(int i = 0; i < 64 && (1ull << i) <= seed; ++i)
+        if(seed & (1ull << i))
+            seeds[i % dim] |= 1ull << (i / dim);
+
+    for(int i = 0; i < dim; ++i)
+        params[i] = test_pattern_1d(seeds[i]);
+}
+
 static bool numtest_run_tests(const struct numtest_args *args) {
     struct numtest_ctx ctx = { 0, 0, 0, 0, 0, 0, 0 };
 
@@ -79,12 +110,10 @@ static bool numtest_run_tests(const struct numtest_args *args) {
 
         ctx.test_case_name = test_case->name;
 
-        uint64_t num = 1;
-        for(int i = 0; i < test_case->num_params; ++i)
-            num *= args->steps;
+        uint64_t num = 1 << 30; // TODO: reasonable default?
 
-        uint64_t first = (args->first < num ? args->first : num);
-        uint64_t last = args->last != 0 ? (args->last < num ? args->last : num) : num;
+        uint64_t first = args->first;
+        uint64_t last = args->last != 0 ? args->last : num;
 
         // TODO: split range for parallel execution!
 
@@ -92,13 +121,7 @@ static bool numtest_run_tests(const struct numtest_args *args) {
             uint64_t seed = xxx; // TODO: random and random seed!
 
             double params[test_case->num_params];
-
-            uint64_t s = seed;
-            for(int i = 0; i < test_case->num_params; ++i) {
-                uint64_t c = s % args->steps;
-                s /= args->steps;
-                params[i] = (double)c / (args->steps-1);
-            }
+            test_pattern(seed, test_case->num_params, params);
 
             // TODO: optionally add noise
 
@@ -135,16 +158,15 @@ static void usage() {
 
 static struct numtest_args parse_args(int argc, char * const argv[]) {
     const struct option long_options[] = {
-        {"steps", required_argument, 0, 0 },
         {"first", required_argument, 0, 0 },
         {"last", required_argument, 0, 0 },
         {"random", optional_argument, 0, 0 },
         { 0, 0, 0, 0}
     };
 
-    const char *short_options = "s:f:l:r::";
+    const char *short_options = "f:l:r::";
 
-    struct numtest_args args = { 0, 0, 0, 0, 0, 0, 0 };
+    struct numtest_args args = { 0, 0, 0, 0, 0, 0 };
 
     while(1) {
         int option_index = 0;
@@ -153,11 +175,7 @@ static struct numtest_args parse_args(int argc, char * const argv[]) {
         if(c == -1)
             break;
 
-        if((c == 0 && strcmp(long_options[option_index].name, "steps") == 0) ||
-            c == 's') {
-            if(!optarg || sscanf(optarg, "%u", &args.steps) != 1)
-                usage();
-        } else if((c == 0 && strcmp(long_options[option_index].name, "first") == 0) ||
+        if((c == 0 && strcmp(long_options[option_index].name, "first") == 0) ||
             c == 'f') {
             if(!optarg || sscanf(optarg, "%lu", &args.first) != 1)
                 usage();
@@ -177,9 +195,6 @@ static struct numtest_args parse_args(int argc, char * const argv[]) {
 
     args.tests = argv + optind;
     args.num_tests = argc - optind;
-
-    if(args.steps == 0)
-        args.steps = 11;
 
     if(args.random && args.random_seed == 0)
         args.random_seed = time(NULL);
