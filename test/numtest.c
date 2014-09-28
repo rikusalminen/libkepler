@@ -12,6 +12,8 @@ struct numtest_args {
 
     char * const *tests;
     int num_tests;
+
+    int list_tests;
 };
 
 struct numtest_ctx {
@@ -110,14 +112,14 @@ static bool numtest_run_tests(const struct numtest_args *args) {
 
         ctx.test_case_name = test_case->name;
 
-        uint64_t num = 1 << 30; // TODO: reasonable default?
+        uint64_t num = 1 << 23;
 
         uint64_t first = args->first;
         uint64_t last = args->last != 0 ? args->last : num;
 
         // TODO: split range for parallel execution!
 
-        for(uint64_t xxx = first; xxx < last; ++xxx) {
+        for(uint64_t xxx = first; xxx <= last; ++xxx) {
             uint64_t seed = xxx; // TODO: random and random seed!
 
             double params[test_case->num_params];
@@ -138,13 +140,26 @@ static bool numtest_run_tests(const struct numtest_args *args) {
         ctx.tests_run += 1;
     }
 
-    printf("TESTS %s  %lu%%  (%d tests, %lu cases pass, %lu cases fail)\n",
-        ctx.cases_failed == 0 ? "PASS" : "FAIL" ,
-        100 * ctx.cases_passed / (ctx.cases_failed + ctx.cases_passed),
-        ctx.tests_run, ctx.cases_passed, ctx.cases_failed
-        );
+    if(ctx.cases_failed + ctx.cases_passed) {
+        fprintf(stdout,
+            "TESTS %s  %lu%%  (%d tests, %lu cases pass, %lu cases fail)\n",
+            ctx.cases_failed == 0 ? "PASS" : "FAIL" ,
+            100 * ctx.cases_passed / (ctx.cases_failed + ctx.cases_passed),
+            ctx.tests_run, ctx.cases_passed, ctx.cases_failed
+            );
+    } else {
+        fprintf(stdout, "NO TESTS RUN\n");
+        return 0;
+    }
 
     return ctx.cases_failed == 0;
+}
+
+static void numtest_list_tests() {
+    for(const struct numtest_case *test_case = numtest_cases + 0;
+        test_case->name != 0;
+        ++test_case)
+        fprintf(stdout, "%s\n", test_case->name);
 }
 
 #include <getopt.h>
@@ -161,12 +176,13 @@ static struct numtest_args parse_args(int argc, char * const argv[]) {
         {"first", required_argument, 0, 0 },
         {"last", required_argument, 0, 0 },
         {"random", optional_argument, 0, 0 },
+        {"list", no_argument, 0, 0 },
         { 0, 0, 0, 0}
     };
 
-    const char *short_options = "f:l:r::";
+    const char *short_options = "f:l:r:L";
 
-    struct numtest_args args = { 0, 0, 0, 0, 0, 0 };
+    struct numtest_args args = { 0, 0, 0, 0, 0, 0, 0 };
 
     while(1) {
         int option_index = 0;
@@ -188,6 +204,9 @@ static struct numtest_args parse_args(int argc, char * const argv[]) {
             args.random = 1;
             if(optarg && sscanf(optarg, "%u", &args.random_seed) != 1)
                 usage();
+        } else if((c == 0 && strcmp(long_options[option_index].name, "list") == 0) ||
+            c == 'L') {
+            args.list_tests = 1;
         } else {
             usage();
         }
@@ -202,12 +221,15 @@ static struct numtest_args parse_args(int argc, char * const argv[]) {
     return args;
 }
 
-int main(int argc, char *argv[]) {
+int numtest_main(int argc, char *argv[]) {
     struct numtest_args args = parse_args(argc, argv);
 
-    bool result = numtest_run_tests(&args);
+    if(args.list_tests) {
+        numtest_list_tests();
+        return EXIT_SUCCESS;
+    }
 
-    return result ? 0 : -1;
+    return numtest_run_tests(&args) ? EXIT_SUCCESS : EXIT_FAILURE;
 }
 
 #if 0
@@ -229,4 +251,7 @@ const struct numtest_case numtest_cases[] = {
     { "dummy_test2", dummy_test, 2, 0 },
     { 0, 0, 0, 0 }
 };
+
+int main(int argc, char *argv[]) { return numtest_main(argc, argv); }
+
 #endif

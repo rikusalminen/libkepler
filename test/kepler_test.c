@@ -68,7 +68,7 @@ void anomaly_test(double *params, int num_params, void *extra_args, struct numte
 
     ASSERT(num_params == 2, "num_params");
 
-    double e = params[0] * 5.0;
+    double e = params[0] * 4.0;
     double t = -1.0 + params[1] * 2.0;
 
     double maxf = e > 1.0 ?
@@ -353,7 +353,7 @@ void orbit_from_elements_test(double *params, int num_params, void *extra_args, 
     ASSERT(num_params == 4, "");
 
     double p = 1.0 + params[0] * 1.0e10;
-    double e = params[1] * 5.0;
+    double e = params[1] * 4.0;
     double mu = 1.0 + params[2] * 1.0e10;
     double a = p / (1.0 - square(e));
     double n = ZEROF(e - 1.0) ?

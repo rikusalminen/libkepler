@@ -92,13 +92,13 @@ double kepler_anomaly_mean_to_eccentric(double e, double M) {
     if(e < 0.3) iter = kepler_iter1;
     else if(e < 0.9) iter = kepler_iter2;
     else if(e < 1.0) iter = kepler_iter3;
-    else if(e > 1.0) iter = kepler_iter4;
+    else iter = kepler_iter4;   // e > 1.0
 
     int num_steps = 1;
     if(e > 0.0 && e < 0.3) num_steps = 10;
     else if(e < 0.9) num_steps = 20;
     else if(e < 1.0) num_steps = 20;
-    else if(e > 1.0) num_steps = 30;
+    else num_steps = 31;    // e > 1.0
 
     double threshold = DBL_EPSILON;
 

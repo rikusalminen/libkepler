@@ -29,4 +29,6 @@ extern void numtest_assert(
     const char *file, int line, const char *function,
     const char *msg, ...);
 
+int numtest_main(int argc, char *argv[]);
+
 #endif

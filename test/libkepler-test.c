@@ -11,3 +11,5 @@ const struct numtest_case numtest_cases[] = {
     { "orbit_from_elements", orbit_from_elements_test, 4, 0 },
     { 0, 0, 0, 0 }
 };
+
+int main(int argc, char *argv[]) { return numtest_main(argc, argv); }

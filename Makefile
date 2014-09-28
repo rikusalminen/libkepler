@@ -1,7 +1,12 @@
 CFLAGS=-std=gnu99
 CFLAGS+=-W -Wall
-CFLAGS+=-O3 -ffast-math -g
-#CFLAGS+=-O0 -g -ggdb
+ifneq ($(DEBUG), 1)
+CFLAGS+=-O3 -ffast-math -march=native
+CFLAGS+=-DNDEBUG
+else
+CFLAGS+=-O0 -g -ggdb
+CFLAGS+=-DDEBUG
+endif
 CFLAGS+=-MMD  # generate dependency .d files
 LDLIBS=-lm -lkepler
 LDFLAGS=-L.
