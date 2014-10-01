@@ -66,7 +66,7 @@ void intercept_test(double *params, int num_params, void *extra_args, struct num
     double mu = 1.0 + params[0] * 1.0e10;
 
     double p1 = 1.0 + params[1] * 1.0e10;
-    double e1 = params[2] * 5.0;
+    double e1 = params[2] * 4.0;
     double a1 = p1 / (1.0 - square(e1));
     double n1 = ZEROF(e1 - 1.0) ?
         sqrt(mu / cube(p1)) :    // parabolic
@@ -96,7 +96,7 @@ void intercept_test(double *params, int num_params, void *extra_args, struct num
     kepler_orbit_normal(&orbit1, nor1);
     cross(nor1, rad1, tan1);
 
-    double e2 = params[7] * 5.0;
+    double e2 = params[7] * 4.0;
     double maxf2 = e2 > 1.0 ?
         acos(1.0/e2) :       // hyperbolic
         (ZEROF(e2-1.0) ?

@@ -82,8 +82,7 @@ int intersect_orbit(
 
     //printf("rel_incl: %lf\n", rel_incl);
 
-    // Non-coplanar orbits
-    double f_an = 0.0, f_dn = M_PI, delta_f = M_PI/2.0;
+    // Coplanar orbits
     if(coplanar) {
         if(zero(f1)) {
             // intersect near periapsis
@@ -97,33 +96,41 @@ int intersect_orbit(
             fs[0] = -f2; fs[1] = -f1; fs[2] = f1; fs[3] = f2;
             return 2;
         }
-    } else {
-        double tan1[3], bit1[3];
-        kepler_orbit_tangent(orbit1, tan1);
-        kepler_orbit_bitangent(orbit1, bit1);
+    }
 
-        f_an = sign(dot(bit1, nodes)) * acos(clamp(-1.0, 1.0, dot(nodes, tan1)/N));
-        f_dn = f_an - sign(f_an) * M_PI;
+    // Non-coplanar orbits
+    double tan1[3], bit1[3];
+    kepler_orbit_tangent(orbit1, tan1);
+    kepler_orbit_bitangent(orbit1, bit1);
 
-        double r_pe = kepler_orbit_periapsis(orbit1); // XXX: ap or pe?
+    double f_an = sign(dot(bit1, nodes)) * acos(clamp(-1.0, 1.0, dot(nodes, tan1)/N));
+    double f_dn = f_an - sign(f_an) * M_PI;
+
+    double f_nodes[2] = { min(f_an, f_dn), max(f_an, f_dn) };
+    double delta_fs[2] = { M_PI, M_PI };
+
+    for(int i = 0; i < 2; ++i) {
+        // distance at node
+        double r = kepler_orbit_semi_latus_rectum(orbit1) /
+            (1.0 + kepler_orbit_eccentricity(orbit1) * cos(f_nodes[i]));
         // spherical trigonometry sine law
-        delta_f = asin(clamp(-1.0, 1.0, sin(threshold / (2.0*r_pe)) / sin(rel_incl / 2.0)));
+        delta_fs[i] = asin(clamp(-1.0, 1.0, sin(threshold / (2.0*r)) / sin(fabs(rel_incl) / 2.0)));
     }
 
     if(zero(f1) && !(f2 < M_PI)) {
         // intersects anywhere on orbit (f = -pi .. pi)
-        fs[0] = angle_clamp(min(f_an, f_dn)-delta_f);
-        fs[1] = angle_clamp(min(f_an, f_dn)+delta_f);
-        fs[2] = angle_clamp(max(f_an, f_dn)-delta_f);
-        fs[3] = angle_clamp(max(f_an, f_dn)+delta_f);
+        fs[0] = angle_clamp(f_nodes[0] - delta_fs[0]);
+        fs[1] = angle_clamp(f_nodes[0] + delta_fs[0]);
+        fs[2] = angle_clamp(f_nodes[1] - delta_fs[1]);
+        fs[3] = angle_clamp(f_nodes[1] + delta_fs[1]);
 
         return 2;
     } else if(zero(f1)) {
         // intersect near periapsis (f = -f2 .. f2)
-        fs[0] = max(min(f_an, f_dn)-delta_f, -f2);
-        fs[1] = min(min(f_an, f_dn)+delta_f, f2);
-        fs[2] = max(max(f_an, f_dn)-delta_f, -f2);
-        fs[3] = min(max(f_an, f_dn)+delta_f, f2);
+        fs[0] = max(f_nodes[0] - delta_fs[0], -f2);
+        fs[1] = min(f_nodes[0] + delta_fs[0], f2);
+        fs[2] = max(f_nodes[1] - delta_fs[1], -f2);
+        fs[3] = min(f_nodes[1] + delta_fs[1], f2);
 
         if(fs[1] >= fs[2]) {
             fs[1] = fs[3];
@@ -131,10 +138,10 @@ int intersect_orbit(
         }
     } else if(kepler_orbit_closed(orbit1) && !(f2 < M_PI)) {
         // intersect near apoapsis (f < -f1, f > f1)
-        fs[0] = angle_clamp(max(min(f_an, f_dn)-delta_f, -f1));
-        fs[1] = min(min(f_an, f_dn)+delta_f, -f1);
-        fs[2] = max(max(f_an, f_dn)-delta_f, f1);
-        fs[3] = angle_clamp(min(max(f_an, f_dn)+delta_f, f1));
+        fs[0] = angle_clamp(max(f_nodes[0] - delta_fs[0], -f1));
+        fs[1] =             min(f_nodes[0] + delta_fs[0], -f1);
+        fs[2] =             max(f_nodes[1] - delta_fs[1], f1);
+        fs[3] = angle_clamp(min(f_nodes[1] + delta_fs[1], f1));
 
         if(fs[0] > 0.0 && fs[3] < 0.0) {
             fs[0] = fs[2];
@@ -142,10 +149,10 @@ int intersect_orbit(
         }
     } else {
         // two intersects (-f2 < f < -f1, f1 < f < f2)
-        fs[0] = angle_clamp(max(min(f_an, f_dn)-delta_f, -f2));
-        fs[1] = min(min(f_an, f_dn)+delta_f, -f1);
-        fs[2] = max(max(f_an, f_dn)-delta_f, f1);
-        fs[3] = angle_clamp(min(max(f_an, f_dn)+delta_f, f2));
+        fs[0] = angle_clamp(max(f_nodes[0] - delta_fs[0], -f2));
+        fs[1] =             min(f_nodes[0] + delta_fs[0], -f1);
+        fs[2] =             max(f_nodes[1] - delta_fs[1], f1);
+        fs[3] = angle_clamp(min(f_nodes[1] + delta_fs[1], f2));
 
         if(fs[0] > 0.0 && fs[3] < 0.0) {
             fs[0] = fs[2];
