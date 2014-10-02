@@ -58,6 +58,16 @@ void intercept_simple_test(double *params, int num_params, void *extra_args, str
     ASSERT(hit, "hit");
 }
 
+#include <stdio.h>
+void print_orbit(const struct kepler_elements *orbit, int idx) {
+    printf("p%d=%lf ; e%d=%lf ; i%d=%lf ; an%d=%lf ; argp%d=%lf\n",
+        idx, orbit->semi_latus_rectum,
+        idx, orbit->eccentricity,
+        idx, orbit->inclination,
+        idx, orbit->longitude_of_ascending_node,
+        idx, orbit->argument_of_periapsis);
+}
+
 void intercept_test(double *params, int num_params, void *extra_args, struct numtest_ctx *test_ctx) {
     (void)extra_args;
 
@@ -73,8 +83,8 @@ void intercept_test(double *params, int num_params, void *extra_args, struct num
         sqrt(mu / cube(fabs(a1)));
 
     double i = params[3] * M_PI;
-    double an = (-1.0 + 2.0 * params[4]) * M_PI;
-    double arg = (-1.0 + 2.0 * params[5]) * M_PI;
+    double an = ZEROF(i) ? 0.0 : (-1.0 + 2.0 * params[4]) * M_PI;
+    double arg = ZEROF(e1) ? 0.0 : (-1.0 + 2.0 * params[5]) * M_PI;
 
     struct kepler_elements orbit1 = { p1, e1, n1, i, an, arg, 0.0 };
 
@@ -133,6 +143,16 @@ void intercept_test(double *params, int num_params, void *extra_args, struct num
     double pos2[3];
     kepler_elements_to_state_t(&orbit2, t0, pos2, vel2);
 
+    // "fix" true anomaly of orbit2 (f2 is wrong for circular orbits)
+    double tan2[3], bit2[3];
+    kepler_orbit_tangent(&orbit2, tan2);
+    kepler_orbit_bitangent(&orbit2, bit2);
+    double f22 = sign(dot(bit2, pos1)) * acos(clamp(-1.0, 1.0, dot(pos1, tan2)/mag(pos1)));
+
+    //printf("f2: %lf\tf22: %lf\n", f2, f22);
+    //print_orbit(&orbit1, 1);
+    //print_orbit(&orbit2, 2);
+
     for(int i = 0; i < 2; ++i) {
         double fs[4];
         double threshold = (1.0/1000.0) *
@@ -146,7 +166,7 @@ void intercept_test(double *params, int num_params, void *extra_args, struct num
         if(intersects == 0)
             continue; // XXX: this should not happen
 
-        double f = i == 0 ? f1 : f2;
+        double f = i == 0 ? f1 : f22;
 
         ASSERT(LTF(fs[0], fs[1]) || (fs[0]*fs[1] < 0.0),
             "True anomaly range is sane");

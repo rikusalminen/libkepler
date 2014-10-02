@@ -111,8 +111,9 @@ int intersect_orbit(
 
     for(int i = 0; i < 2; ++i) {
         // distance at node
-        double r = kepler_orbit_semi_latus_rectum(orbit1) /
-            (1.0 + kepler_orbit_eccentricity(orbit1) * cos(f_nodes[i]));
+        //double r = kepler_orbit_semi_latus_rectum(orbit1) /
+            //(1.0 + kepler_orbit_eccentricity(orbit1) * cos(f_nodes[i]));
+        double r = kepler_orbit_periapsis(orbit1); // XXX: periapsis?
         // spherical trigonometry sine law
         delta_fs[i] = asin(clamp(-1.0, 1.0, sin(threshold / (2.0*r)) / sin(fabs(rel_incl) / 2.0)));
     }
