@@ -166,12 +166,15 @@ void intercept_test(double *params, int num_params, void *extra_args, struct num
         if(intersects == 0)
             continue; // XXX: this should not happen
 
-        double f = i == 0 ? f1 : f22;
+        ASSERT(isfinite(fs[0]) && isfinite(fs[1]) &&
+            (intersects < 2 || (isfinite(fs[2]) && isfinite(fs[3]))),
+            "Intersect true anomaly not NaN");
 
-        ASSERT(LTF(fs[0], fs[1]) || (fs[0]*fs[1] < 0.0),
-            "True anomaly range is sane");
-        ASSERT(intersects < 2 || (LTF(fs[2], fs[3]) || (fs[2]*fs[3] < 0.0)),
-            "True anomaly range is sane");
+        for(int j = 0; j < intersects*2; ++j)
+            ASSERT_RANGEF(fs[j], -M_PI, M_PI,
+                "Intersect true anomaly in range -pi..pi");
+
+        double f = i == 0 ? f1 : f22;
 
         ASSERT(
             // intersect1
@@ -184,5 +187,17 @@ void intercept_test(double *params, int num_params, void *extra_args, struct num
             // intersect2 near apoapsis
                 (fs[2] > fs[3] && (LTF(fs[2], f) || LTF(f, fs[3]))))),
             "True anomaly within range");
+
+        ASSERT(intersects < 2 || !(fs[0] > fs[1] && fs[2] > fs[3]),
+            "True anomaly ranges overlap at apoapsis");
+        ASSERT(intersects < 2 || (fs[0] < fs[1]) ||
+                (fs[1] < fs[2] && fs[3] < fs[0]),
+            "True anomaly ranges overlap");
+        ASSERT(intersects < 2 || (fs[2] < fs[3]) ||
+                (fs[3] < fs[0] && fs[1] < fs[2]),
+            "True anomaly ranges overlap");
+        ASSERT(intersects < 2 || !(fs[0] < fs[1] && fs[2] < fs[3]) ||
+            fs[1] < fs[2],
+            "True anomaly ranges overlap");
     }
 }

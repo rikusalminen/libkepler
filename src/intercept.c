@@ -139,16 +139,24 @@ int intersect_orbit(
         }
     } else if(kepler_orbit_closed(orbit1) && !(f2 < M_PI)) {
         // intersect near apoapsis (f < -f1, f > f1)
-        fs[0] = max(f_nodes[0] - delta_fs[0], f1);
-        fs[1] = min(angle_clamp(f_nodes[0] + delta_fs[0]), -f1);
-        fs[2] = max(f_nodes[1] - delta_fs[1], f1);
-        fs[3] = min(angle_clamp(f_nodes[1] + delta_fs[1]), -f1);
-
-        if(fs[0] > 0.0 && fs[3] < 0.0) {
-            // XXX: this isn't correct, is it?
-            fs[0] = fs[2];
-            return 1;
+        int is = 0;
+        if(f_nodes[0] - delta_fs[0] < -f1) {
+            fs[2*is+0] = f_nodes[0] - delta_fs[0] < -M_PI ?
+                max(angle_clamp(f_nodes[0]-delta_fs[0]), f1) :
+                f_nodes[0] - delta_fs[0];
+            fs[2*is+1] = min(f_nodes[0] + delta_fs[0], -f1);
+            is += 1;
         }
+
+        if(f_nodes[1] + delta_fs[1] > f1) {
+            fs[2*is+0] = max(f_nodes[1] - delta_fs[1], f1);
+            fs[2*is+1] = f_nodes[1] + delta_fs[1] > M_PI ?
+                min(angle_clamp(f_nodes[1] + delta_fs[1]), -f1) :
+                f_nodes[1] + delta_fs[1];
+            is += 1;
+        }
+
+        return is;
     } else {
         // two intersects (-f2 < f < -f1, f1 < f < f2)
         fs[0] = max(f_nodes[0] - delta_fs[0], -f2);
