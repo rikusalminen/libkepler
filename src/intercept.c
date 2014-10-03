@@ -164,25 +164,16 @@ int intersect_orbit(
         fs[2] = max(f_nodes[1] - delta_fs[1], f1);
         fs[3] = min(f_nodes[1] + delta_fs[1], f2);
 
-        if(fs[0] > 0.0 && fs[3] < 0.0) {
-            fs[0] = fs[2];
-            return 1;
-        }
-
         if(fs[1] >= fs[2]) {
             fs[1] = fs[3];
             return 1;
         }
     }
 
-    if((fs[0] > fs[1]) && !(fs[2] > fs[3])) { swap(fs+0, fs+2); swap(fs+1, fs+3); }
-
-    /*
-    printf("f1: %2.3lf\t f2: %2.3lf\t f_an: %2.3lf\t f_dn: %2.3lf\t delta_f: %2.3lf\n",
-        f1, f2, f_an, f_dn, delta_f);
-    printf("f11: %2.3lf\t f12: %2.3lf\t f21: %2.3lf\t f22: %2.3lf\n",
-        fs[0], fs[1], fs[2], fs[3]);
-        */
+    if((fs[0] > fs[1]) && !(fs[2] > fs[3])) {
+        swap(fs+0, fs+2);
+        swap(fs+1, fs+3);
+    }
 
     return (fs[0] < fs[1]) + (fs[2] < fs[3]);
 }
