@@ -27,7 +27,7 @@ static bool zero(double x) {
 }
 
 static double sign(double x) { return x < 0 ? -1.0 : 1.0; }
-//static double square(double x) { return x*x; }
+static double square(double x) { return x*x; }
 //static double cube(double x) { return x*x*x; }
 
 static double min(double a, double b) { return a < b ? a : b; }
@@ -194,6 +194,33 @@ bool intercept_minimize(
     (void)intercept;
 
     return false;
+
+    double mu = kepler_orbit_gravity_parameter(orbit1);
+
+    double vmax[2] = {
+        kepler_orbit_periapsis_vel(orbit1),
+        kepler_orbit_periapsis_vel(orbit2)
+    };
+
+    double amax[2] = {
+        mu / square(kepler_orbit_periapsis(orbit1)),
+        mu / square(kepler_orbit_periapsis(orbit2))
+    };
+
+
+    for(int i = 0; t0 < t1; i = !i) {
+        double t = i ? t1 : t0;
+
+        double pos1[3], vel1[3], pos2[3], vel2[3];
+        kepler_elements_to_state_t(orbit1, t, pos1, vel1);
+        kepler_elements_to_state_t(orbit2, t, pos2, vel2);
+
+        double dr[3], dv[3];
+        for(int j = 0; j < 3; ++j) {
+            dr[j] = pos2[j] - pos1[j];
+            dv[j] = vel2[j] - vel1[j];
+        }
+    }
 }
 
 bool intercept_orbit(
