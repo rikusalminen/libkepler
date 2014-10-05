@@ -70,6 +70,10 @@ int intersect_orbit(
         }
     }
 
+    if(kepler_orbit_hyperbolic(orbit1)) {
+        f2 = acos(1.0 / kepler_orbit_eccentricity(orbit1));
+    }
+
     // Relative inclination and line of nodes
     double nor1[3], nor2[3];
     double nodes[3];
@@ -118,7 +122,7 @@ int intersect_orbit(
         delta_fs[i] = asin(clamp(-1.0, 1.0, sin(threshold / (2.0*r)) / sin(fabs(rel_incl) / 2.0)));
     }
 
-    if(zero(f1) && !(f2 < M_PI)) {
+    if(kepler_orbit_closed(orbit1) && zero(f1) && !(f2 < M_PI)) {
         // intersects anywhere on orbit (f = -pi .. pi)
         fs[0] = angle_clamp(f_nodes[0] - delta_fs[0]);
         fs[1] = angle_clamp(f_nodes[0] + delta_fs[0]);

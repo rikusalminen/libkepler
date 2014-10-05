@@ -199,5 +199,10 @@ void intercept_test(double *params, int num_params, void *extra_args, struct num
         ASSERT(intersects < 2 || !(fs[0] < fs[1] && fs[2] < fs[3]) ||
             fs[1] < fs[2],
             "True anomaly ranges overlap");
+
+        ASSERT(((fs[0] < fs[1]) &&
+            (intersects < 2 || (fs[2] < fs[3]))) ||
+            kepler_orbit_closed(i == 0 ? &orbit1 : &orbit2),
+            "Apoapsis intersect on closed orbit");
     }
 }
