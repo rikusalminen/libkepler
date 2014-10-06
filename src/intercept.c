@@ -251,7 +251,7 @@ bool intercept_orbit(
 
             trange[o][0] = times[o][2*isect[o]] + period;
             if(times[o][2*isect[o]] > times[o][2*isect[o]+1]) // near apoapsis
-                trange[o][0] -= kepler_orbit_period(orbits[1]);
+                trange[o][0] -= kepler_orbit_period(orbits[o]);
 
             trange[o][1] = times[o][2*isect[o]+1] + period;
         }
