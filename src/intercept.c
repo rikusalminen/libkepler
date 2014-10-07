@@ -221,19 +221,26 @@ bool intercept_orbit(
     // time ranges of possible intercepts
     double times[2][4];
     for(int o = 0; o < 2; ++o) {
-        for(int i = 0; i < 2*intersects[o]; ++i) {
-            times[o][i] =
-                kepler_orbit_periapsis_time(orbits[o]) +
-                (kepler_anomaly_true_to_mean(kepler_orbit_eccentricity(orbits[o]), fs[o][i]) /
-                 kepler_orbit_mean_motion(orbits[o]));
-        }
+        double e = kepler_orbit_eccentricity(orbits[o]);
+        double n = kepler_orbit_mean_motion(orbits[o]);
+        double P = kepler_orbit_period(orbits[o]);
+        double t_pe = kepler_orbit_periapsis_time(orbits[o]);
 
-        // intersect #2 is before #1
-        int swapped = intersects[o] == 2 && (times[o][2] > times[o][3]);
+        // intersect #2 is before #1 (near apoapsis)
+        int swapped = intersects[o] == 2 && (fs[o][2] > fs[o][3]);
 
-        if(swapped) {
-            swap(&times[o][0], &times[o][2]);
-            swap(&times[o][1], &times[o][3]);
+        for(int i = 0; i < intersects[o]; ++i) {
+            int isect = swapped ? !i : i;
+
+            for(int j = 0; j < 2; ++j) {
+                double f = fs[o][2*isect+j];
+                double M = kepler_anomaly_true_to_mean(e, f);
+
+                times[o][2*i+j] = t_pe + (M / n);
+            }
+
+            if(times[o][2*i] > times[o][2*i+1])
+                times[o][2*i] -= P;
         }
     }
 
@@ -241,12 +248,14 @@ bool intercept_orbit(
     int n_orbit[2] = { 0, 0 };
     int isect[2] = { 0, 0 };
 
-    for(int o = 0; o < 2; ++o)
-        if(kepler_orbit_closed(orbits[o]))
-            n_orbit[o] = (int)trunc(
-                (t0 - kepler_orbit_periapsis_time(orbits[o])) /
-                kepler_orbit_period(orbits[o]) +
-                (kepler_orbit_periapsis_time(orbits[o]) > t0 ? -0.5 : 0.5));
+    for(int o = 0; o < 2; ++o) {
+        if(kepler_orbit_closed(orbits[o])) {
+            double t_pe = kepler_orbit_periapsis_time(orbits[o]);
+            double P = kepler_orbit_period(orbits[o]);
+
+            n_orbit[o] = (int)trunc((t0 - t_pe)/P + (t_pe > t0 ? -0.5 : 0.5));
+        }
+    }
 
     // loop over orbits to cover entire time range
     int num_intercepts = 0;
@@ -260,9 +269,6 @@ bool intercept_orbit(
                  n_orbit[o] * kepler_orbit_period(orbits[o]));
 
             trange[o][0] = times[o][2*isect[o]] + period;
-            if(times[o][2*isect[o]] > times[o][2*isect[o]+1]) // near apoapsis
-                trange[o][0] -= kepler_orbit_period(orbits[o]);
-
             trange[o][1] = times[o][2*isect[o]+1] + period;
         }
 
