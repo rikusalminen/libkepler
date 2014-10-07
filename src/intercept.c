@@ -220,12 +220,22 @@ bool intercept_orbit(
 
     // time ranges of possible intercepts
     double times[2][4];
-    for(int o = 0; o < 2; ++o)
-        for(int i = 0; i < 2*intersects[o]; ++i)
+    for(int o = 0; o < 2; ++o) {
+        for(int i = 0; i < 2*intersects[o]; ++i) {
             times[o][i] =
                 kepler_orbit_periapsis_time(orbits[o]) +
                 (kepler_anomaly_true_to_mean(kepler_orbit_eccentricity(orbits[o]), fs[o][i]) /
                  kepler_orbit_mean_motion(orbits[o]));
+        }
+
+        // intersect #2 is before #1
+        int swapped = intersects[o] == 2 && (times[o][2] > times[o][3]);
+
+        if(swapped) {
+            swap(&times[o][0], &times[o][2]);
+            swap(&times[o][1], &times[o][3]);
+        }
+    }
 
     // number of orbital periods to periapsis
     int n_orbit[2] = { 0, 0 };
