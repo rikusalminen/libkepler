@@ -417,26 +417,17 @@ void kepler_elements_to_state_f(
     double f,
     double *pos,
     double *vel) {
-    // generic conic trajectory with true anomaly and vis-viva equation
+    // generic conic trajectory with true anomaly
     double p = elements->semi_latus_rectum;
     double e = elements->eccentricity;
-    double a = kepler_orbit_semi_major_axis(elements);
     double mu = kepler_orbit_gravity_parameter(elements);
 
     double r = p / (1.0 + e*cos(f));
-    double v = kepler_orbit_parabolic(elements) ?
-        sqrt(mu * (2.0 / r)) :
-        sqrt(mu * (2.0 / r - 1.0 / a));
-
     double x = r * cos(f);
     double y = r * sin(f);
 
-    double dx = -p * sin(f) / square(1.0 + e*cos(f));
-    double dy = p * (e + cos(f)) / square(1.0 + e*cos(f));
-    double d = sqrt(dx*dx + dy*dy);
-
-    double vx = v * dx / d;
-    double vy = v * dy / d;
+    double vx = sqrt(mu / p) * -sin(f);
+    double vy = sqrt(mu / p) * (e + cos(f));
 
     pos[0] = x; pos[1] = y; pos[2] = 0.0;
     vel[0] = vx; vel[1] = vy; vel[2] = 0.0;
