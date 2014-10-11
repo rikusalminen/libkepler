@@ -186,29 +186,24 @@ bool intercept_minimize(
     double threshold,
     double t0, double t1,
     struct intercept *intercept) {
-    (void)orbit1;
-    (void)orbit2;
-    (void)threshold;
-    (void)t0;
-    (void)t1;
     (void)intercept;
 
-    return false;
+    // this algorithm finds 0, 1 or 2 intercepts during interval t0..t1
 
     double mu = kepler_orbit_gravity_parameter(orbit1);
 
-    double vmax[2] = {
-        kepler_orbit_periapsis_vel(orbit1),
-        kepler_orbit_periapsis_vel(orbit2)
-    };
+    double vmax = kepler_orbit_periapsis_vel(orbit1) +
+        kepler_orbit_periapsis_vel(orbit2);
 
-    double amax[2] = {
-        mu / square(kepler_orbit_periapsis(orbit1)),
-        mu / square(kepler_orbit_periapsis(orbit2))
-    };
+    double amax = mu / square(kepler_orbit_periapsis(orbit1)) +
+        mu / square(kepler_orbit_periapsis(orbit2));
 
+    int converged = 0;
 
-    for(int i = 0; t0 < t1; i = !i) {
+    for(int i = 0; t0 < t1 && converged != 0x3; i = !i) {
+        if(converged & (1 << i))
+            continue;
+
         double t = i ? t1 : t0;
 
         double pos1[3], vel1[3], pos2[3], vel2[3];
@@ -218,9 +213,37 @@ bool intercept_minimize(
         double dr[3], dv[3];
         for(int j = 0; j < 3; ++j) {
             dr[j] = pos2[j] - pos1[j];
-            dv[j] = vel2[j] - vel1[j];
+            dv[j] = vel1[j] - vel2[j];
         }
+
+        double d2 = dot(dr, dr), d = sqrt(d2);
+        double v_rel = dot(dr, dv) / d;
+
+        if(fabs(d) < threshold) {
+            converged |= 1 << i;
+        }
+
+        double dt_vel = v_rel < 0 ? -1.0 : d/v_rel;
+
+        double a = 0.5 * amax;
+        double b = vmax;
+        double c = -(fabs(d) - threshold); // XXX: make sure this doesn't go negative
+        double dt_max = (-b + sqrt(b*b - 4.0*a*c))/(2.0 * a);
+
+        double dt = max(0.0, max(dt_max, dt_vel));
+        *(i ? &t0 : &t1) += i ? dt : -dt;
     }
+
+    if(converged != 0x3) {
+        return false;
+    }
+
+    double threshold_t = threshold / vmax;
+    if(t1 - t0 > threshold_t) {
+        // XXX: two intercepts, split range in two
+    }
+
+    return true;
 }
 
 bool intercept_orbit(
@@ -228,8 +251,6 @@ bool intercept_orbit(
     const struct kepler_elements *orbit2,
     double t0, double t1,
     struct intercept *intercept) {
-    (void)intercept;
-
     // TODO: adjustable threshold variable, SOI search
     double threshold = (1.0/1000.0) *
         min(kepler_orbit_semi_latus_rectum(orbit1),
@@ -266,7 +287,7 @@ bool intercept_orbit(
                 times[o][2*i+j] = t_pe + (M / n);
             }
 
-            if(times[o][2*i] > times[o][2*i+1])
+            if(times[o][2*i] > times[o][2*i+1]) // intersect near apoapsis
                 times[o][2*i] -= P;
         }
     }
@@ -307,7 +328,8 @@ bool intercept_orbit(
         if(t_begin < t_end) {
             // possible intercept on time interval t_begin .. t_end
 
-            // TODO: intercept_minimize(orbit1, orbit2, t_begin, t_end, threshold);
+            intercept_minimize(orbit1, orbit2, threshold, t_begin, t_end, intercept);
+
             num_intercepts += 1; // XXX:
         }
 
