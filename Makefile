@@ -13,7 +13,9 @@ LDFLAGS=-L.
 
 SRCS= \
 	src/kepler.c \
+	src/universal_var.c \
 	test/kepler_test.c \
+	test/universal_var_test.c \
 	test/numtest.c \
 	test/libkepler-test.c
 TARGETS= \
@@ -21,12 +23,14 @@ TARGETS= \
 	test/libkepler-test
 
 libkepler.a: \
-	src/kepler.o
+	src/kepler.o \
+	src/universal_var.o
 
 test/libkepler-test: \
 	test/libkepler-test.o \
 	test/numtest.o \
 	test/kepler_test.o \
+	test/universal_var_test.o \
 	libkepler.a
 
 TEST_SUITE=test/libkepler-test
@@ -81,7 +85,7 @@ endif
 -include $(DEPS)
 
 # implicit rules for building archives not parallel safe (e.g. make -j 3)
-%.a: ; ar rcs $@ $<
+%.a: ; ar rcs $@ $^
 
 # cscope.out
 cscope.out: $(SRCS)
