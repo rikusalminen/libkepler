@@ -42,6 +42,22 @@ void universal_var_stumpff_test(double *params, int num_params, void *extra_args
     for(int i = 0; i < 2; ++i)
         ASSERT_EQF(1.0 - cs[i], z*cs[i+2], "Stumpff series c%d recurrence relation", i);
 
+    for(int i = 0; i < 4; ++i) {
+        double ds = 1.0e-4;
+
+        double dcds = (i == 0) ?
+            -alpha * s * cs[1] : // d/ds c_0(z)
+            pow(s, i-1) * cs[i-1]; // d/ds s^i c_i(z)
+
+        double splus = s + ds, sminus = s - ds;
+        double zplus = alpha * splus * splus, zminus = alpha * sminus * sminus;
+        double cplus = pow(splus, i) * universal_var_stumpff_series(i, zplus),
+           cminus = pow(sminus, i) * universal_var_stumpff_series(i, zminus);
+        double dc = cplus - cminus;
+
+        ASSERT_EQF(2.0 * dcds * ds, dc, "d/ds c%d(z)", i);
+    }
+
     double cs_fun[4]  = {
         universal_var_stumpff_c0(alpha, s),
         universal_var_stumpff_c1(alpha, s),
@@ -57,7 +73,6 @@ void universal_var_stumpff_test(double *params, int num_params, void *extra_args
 
     for(int i = 0; i < 4; ++i)
         ASSERT_EQF(cs[i], cs_fun[i], "Stumpff function and series c%d are equal", i);
-
 }
 
 void universal_var_CS_test(double *params, int num_params, void *extra_args, struct numtest_ctx *test_ctx) {
