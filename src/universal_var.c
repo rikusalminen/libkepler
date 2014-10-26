@@ -247,3 +247,86 @@ void universal_var(
     for(int i = 0; i < 3; ++i)
         vel[i] = fdot*pos0[i] + gdot*vel0[i];
 }
+
+double universal_var_stumpff_c0(double alpha, double s) {
+    double z = alpha * s*s;
+    double sqrtz = sqrt(fabs(z));
+
+    if(zero(z))             // zero
+        return 1.0;
+    else if(zero(alpha))    // parabolic
+        return 1.0;
+    else if(alpha < 0.0)    // hyperbolic
+        return cosh(sqrtz);
+    else                    // elliptic
+        return cos(sqrtz);
+
+}
+
+double universal_var_stumpff_c1(double alpha, double s) {
+    double z = alpha * s*s;
+    double sqrtz = sqrt(fabs(z));
+
+    if(zero(z))             // zero
+        return 1.0; // XXX: 1.0 or 0.0?
+    else if(zero(alpha))     // parabolic
+        return s;
+    else if(alpha < 0.0)    // hyperbolic
+        return sinh(sqrtz) / sqrtz;
+    else                    // elliptic
+        return sin(sqrtz) / sqrtz;
+}
+
+double universal_var_stumpff_c2(double alpha, double s) {
+    double z = alpha * s*s;
+    double sqrtz = sqrt(fabs(z));
+
+    if(zero(z))             // zero
+        return 1.0 / 2.0;
+    else if(zero(alpha))    // parabolic
+        return s*s / 2.0;
+    else if(alpha < 0.0)    // hyperbolic
+        return (cosh(sqrtz) - 1.0) / -z;
+    else                    // elliptic
+        return (1.0 - cos(sqrtz)) / z;
+}
+
+double universal_var_stumpff_c3(double alpha, double s) {
+    double z = alpha * s*s;
+    double sqrtz = sqrt(fabs(z));
+
+    if(zero(z))             // zero
+        return 1.0 / 6.0;
+    else if(zero(alpha))    // parabolic
+        return s*s*s / 6.0;
+    else if(alpha < 0.0)    // hyperbolic
+        return (sinh(sqrtz) - sqrtz) / (-z * sqrtz);
+    else                    // elliptic
+        return (sqrtz - sin(sqrtz)) / (z * sqrtz);
+}
+
+double universal_var_stumpff_series(int k, double z) {
+    // c_k(z) = sum (-z)^i / (k + 2i)!
+
+    int fac = 1;
+    for(int i = 1; i <= k; ++i)
+        fac = fac * i;
+
+    double numer = 1.0, denom = fac;
+    double c = numer / denom, sum = c;
+
+    int max_steps = 30;
+    for(int i = 1; i < max_steps && fabs(c) >= DBL_EPSILON; ++i) {
+        numer *= -z;
+        denom *= (k + 2*i) * (k + 2*i - 1);
+
+        c = numer / denom;
+        sum += c;
+    }
+
+    return sum;
+}
+
+void universal_var_stumpff_fast(double z, double *cs) {
+    (void)z; (void)cs;
+}

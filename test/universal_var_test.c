@@ -22,6 +22,44 @@ static bool eqv3(double *a, double *b) {
         ZEROF(dot(diff, diff)/(dot(a, a) + dot(b, b)));
 }
 
+void universal_var_stumpff_test(double *params, int num_params, void *extra_args, struct numtest_ctx *test_ctx) {
+    (void)extra_args;
+    ASSERT(num_params == 2, "");
+
+    const double maxs = 4.0*M_PI, maxalpha = 1.0;
+    double s = (-1.0 + 2.0 * params[0]) * maxs;
+    double alpha = (-1.0 + 2.0 * params[1]) * maxalpha;
+
+    double z = alpha * s*s;
+
+    double cs[4];
+    for(int i = 0; i < 4; ++i)
+        cs[i] = universal_var_stumpff_series(i, z);
+
+    for(int i = 0; i < 4; ++i)
+        ASSERT(isfinite(cs[i]), "Stumpff series c%d not NaN", i);
+
+    for(int i = 0; i < 2; ++i)
+        ASSERT_EQF(1.0 - cs[i], z*cs[i+2], "Stumpff series c%d recurrence relation", i);
+
+    double cs_fun[4]  = {
+        universal_var_stumpff_c0(alpha, s),
+        universal_var_stumpff_c1(alpha, s),
+        universal_var_stumpff_c2(alpha, s),
+        universal_var_stumpff_c3(alpha, s)
+    };
+
+    for(int i = 0; i < 4; ++i)
+        ASSERT(isfinite(cs_fun[i]), "Stumpff function c%d not NaN", i);
+
+    for(int i = 0; i < 2; ++i)
+        ASSERT_EQF(1.0 - cs_fun[i], z*cs_fun[i+2], "Stumpff function c%d recurrence relation", i);
+
+    for(int i = 0; i < 4; ++i)
+        ASSERT_EQF(cs[i], cs_fun[i], "Stumpff function and series c%d are equal", i);
+
+}
+
 void universal_var_CS_test(double *params, int num_params, void *extra_args, struct numtest_ctx *test_ctx) {
     (void)extra_args;
     ASSERT(num_params == 1, "");

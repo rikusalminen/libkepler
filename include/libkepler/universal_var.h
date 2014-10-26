@@ -79,4 +79,12 @@ void universal_var(
     double t,
     double *pos, double *vel);
 
+double universal_var_stumpff_c0(double alpha, double s);
+double universal_var_stumpff_c1(double alpha, double s);
+double universal_var_stumpff_c2(double alpha, double s);
+double universal_var_stumpff_c3(double alpha, double s);
+double universal_var_stumpff_series(int k, double z);
+
+void universal_var_stumpff_fast(double z, double *cs);
+
 #endif
