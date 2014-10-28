@@ -3,12 +3,14 @@
 #include <stdarg.h>
 #include <string.h>
 #include <stdio.h>
+#include <time.h>
 
 #include "numtest.h"
 
 struct numtest_args {
     uint64_t first, last;
     int random, random_seed;
+    int silent, verbose;
 
     char * const *tests;
     int num_tests;
@@ -27,6 +29,8 @@ struct numtest_ctx {
     uint64_t cases_failed;
 
     int tests_run;
+
+    const struct numtest_args *args;
 };
 
 void numtest_assert_failed(
@@ -35,6 +39,10 @@ void numtest_assert_failed(
     const char *msg,
     va_list va)
 {
+    uint64_t max_failures = 100;
+    if(ctx->args->silent || (!ctx->args->verbose && ctx->cases_failed >= max_failures))
+        return;     // only print first few failures to avoid spamming logs
+
     FILE *out = stdout;
     fprintf(out, "%s(%lu): ASSERT FAILED (%s:%d %s)  \n\t",
             ctx->test_case_name,
@@ -98,7 +106,11 @@ static void test_pattern(uint64_t seed, int dim, double *params) {
 }
 
 static bool numtest_run_tests(const struct numtest_args *args) {
-    struct numtest_ctx ctx = { 0, 0, 0, 0, 0, 0, 0 };
+    struct numtest_ctx ctx = { 0, 0, 0, 0, 0, 0, 0, 0 };
+    ctx.args = args;
+
+    time_t time_begin = time(0), time_output = time_begin;
+    uint64_t total_pass = 0, total_fail = 0;
 
     for(const struct numtest_case *test_case = numtest_cases + 0;
         test_case->name != 0;
@@ -111,13 +123,13 @@ static bool numtest_run_tests(const struct numtest_args *args) {
             continue;
 
         ctx.test_case_name = test_case->name;
+        ctx.cases_passed = ctx.cases_failed = 0;
 
         uint64_t num = 1 << 23;
-
         uint64_t first = args->first;
         uint64_t last = args->last != 0 ? args->last : num;
 
-        // TODO: split range for parallel execution!
+        time_t time_test_begin = time(0);
 
         for(uint64_t xxx = first; xxx <= last; ++xxx) {
             uint64_t seed = xxx; // TODO: random and random seed!
@@ -135,20 +147,52 @@ static bool numtest_run_tests(const struct numtest_args *args) {
                 ctx.cases_passed += 1;
             else
                 ctx.cases_failed += 1;
+
+            if(!args->silent && ctx.cases_passed + ctx.cases_failed % 10000) {
+                time_t time_now = time(0);
+
+                if(time_now - time_output >= 60) { // write a message once a minute
+                    time_t total = time_now - time_begin,
+                           seconds = total % 60,
+                           minutes = (total / 60) % 60,
+                           hours = total / 3600;
+                    fprintf(stderr,
+                        "%02luh%02lum%02lus %s %02lu%% (%lu pass, %lu fail)\n",
+                        hours, minutes, seconds,
+                        ctx.test_case_name, 100*(xxx-first)/(last-first),
+                        ctx.cases_passed, ctx.cases_failed);
+                    time_output = time_now;
+                }
+            }
         }
 
+        total_pass += ctx.cases_passed;
+        total_fail += ctx.cases_failed;
         ctx.tests_run += 1;
+
+        time_t time_test_end = time(0);
+        if(!args->silent) {
+            time_t total = time_test_end - time_test_begin,
+                   seconds = total % 60,
+                   minutes = (total / 60) % 60,
+                   hours = total / 3600;
+            fprintf(stderr,
+                "%s %s  (%lu pass, %lu fail, %02luh%02lum%02lus)\n",
+                ctx.cases_failed == 0 ? "PASS" : "FAIL", ctx.test_case_name,
+                ctx.cases_passed, ctx.cases_failed,
+                hours, minutes, seconds);
+            time_output = time_test_end;
+        }
     }
 
-    if(ctx.cases_failed + ctx.cases_passed) {
+    if(!args->silent && total_fail + total_pass) {
         fprintf(stdout,
             "TESTS %s  %lu%%  (%d tests, %lu cases pass, %lu cases fail)\n",
-            ctx.cases_failed == 0 ? "PASS" : "FAIL" ,
-            100 * ctx.cases_passed / (ctx.cases_failed + ctx.cases_passed),
-            ctx.tests_run, ctx.cases_passed, ctx.cases_failed
-            );
+            ctx.cases_failed == 0 ? "PASS" : "FAIL",
+            100 * total_pass / (total_pass + total_fail),
+            ctx.tests_run, total_pass, total_fail);
     } else {
-        fprintf(stdout, "NO TESTS RUN\n");
+        fprintf(stderr, "NO TESTS RUN\n");
         return 0;
     }
 
@@ -177,12 +221,14 @@ static struct numtest_args parse_args(int argc, char * const argv[]) {
         {"last", required_argument, 0, 0 },
         {"random", optional_argument, 0, 0 },
         {"list", no_argument, 0, 0 },
+        {"silent", no_argument, 0, 0 },
+        {"verbose", no_argument, 0, 0 },
         { 0, 0, 0, 0}
     };
 
-    const char *short_options = "f:l:r:L";
+    const char *short_options = "f:l:r:Lsv";
 
-    struct numtest_args args = { 0, 0, 0, 0, 0, 0, 0 };
+    struct numtest_args args = { 0, 0, 0, 0, 0, 0, 0, 0, 0 };
 
     while(1) {
         int option_index = 0;
@@ -207,6 +253,12 @@ static struct numtest_args parse_args(int argc, char * const argv[]) {
         } else if((c == 0 && strcmp(long_options[option_index].name, "list") == 0) ||
             c == 'L') {
             args.list_tests = 1;
+        } else if((c == 0 && strcmp(long_options[option_index].name, "silent") == 0) ||
+            c == 's') {
+            args.silent = 1;
+        } else if((c == 0 && strcmp(long_options[option_index].name, "verbose") == 0) ||
+            c == 'v') {
+            args.verbose = 1;
         } else {
             usage();
         }
