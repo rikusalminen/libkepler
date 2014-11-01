@@ -198,52 +198,65 @@ bool intercept_minimize(
     double amax = mu / square(kepler_orbit_periapsis(orbit1)) +
         mu / square(kepler_orbit_periapsis(orbit2));
 
-    int converged = 0;
+    double times[4] = { t0, t1, 0.0, 0.0 };
+    int intercepts = 0;
 
-    for(int i = 0; t0 < t1 && converged != 0x3; i = !i) {
-        if(converged & (1 << i))
-            continue;
+    for(int isect = 0; isect == 0; ++isect) { // XXX: condition
 
-        double t = i ? t1 : t0;
+        int converged = 0;
+        for(int i = 0; times[2*isect+1] > times[2*isect+0] && converged != 0x3; i = !i) {
+            if(converged & (1 << i))
+                continue;
 
-        double pos1[3], vel1[3], pos2[3], vel2[3];
-        kepler_elements_to_state_t(orbit1, t, pos1, vel1);
-        kepler_elements_to_state_t(orbit2, t, pos2, vel2);
+            double t = times[2*isect + i];
+            double neg = i ? 1.0 : -1.0;
 
-        double dr[3], dv[3];
-        for(int j = 0; j < 3; ++j) {
-            dr[j] = pos2[j] - pos1[j];
-            dv[j] = vel1[j] - vel2[j];
+            double pos1[3], vel1[3], pos2[3], vel2[3];
+            kepler_elements_to_state_t(orbit1, t, pos1, vel1);
+            kepler_elements_to_state_t(orbit2, t, pos2, vel2);
+
+            double dr[3], dv[3];
+            for(int j = 0; j < 3; ++j) {
+                dr[j] = pos2[j] - pos1[j];
+                dv[j] = vel1[j] - vel2[j];
+            }
+
+            double d2 = dot(dr, dr), d = sqrt(d2);
+
+            if(fabs(d) < threshold) {
+                converged |= 1 << i;
+            }
+
+            double v_rel = dot(dr, dv) / d;
+            double dt_vel = v_rel < 0 ? -1.0 : d/v_rel;
+
+            if(v_rel * neg > 0.0) {
+                // getting closer
+            } else {
+                // going away
+            }
+
+            double a = 0.5 * amax;
+            double b = vmax;
+            double c = -(fabs(d) - threshold);
+            double dt_max = (-b + sqrt(b*b - 4.0*a*c))/(2.0 * a);
+
+            double dt = max(0.0, max(dt_max, dt_vel));
+            times[2*isect + i] = t + neg * dt;
         }
 
-        double d2 = dot(dr, dr), d = sqrt(d2);
-        double v_rel = dot(dr, dv) / d;
-
-        if(fabs(d) < threshold) {
-            converged |= 1 << i;
+        if(converged != 0x3) {
+            return false;
         }
 
-        double dt_vel = v_rel < 0 ? -1.0 : d/v_rel;
-
-        double a = 0.5 * amax;
-        double b = vmax;
-        double c = -(fabs(d) - threshold); // XXX: make sure this doesn't go negative
-        double dt_max = (-b + sqrt(b*b - 4.0*a*c))/(2.0 * a);
-
-        double dt = max(0.0, max(dt_max, dt_vel));
-        *(i ? &t0 : &t1) += i ? dt : -dt;
+        double threshold_t = threshold / vmax;
+        if(times[2*isect+1] - times[2*isect+0] > threshold_t) {
+            // XXX: two intercepts, split range in two
+            //times[2*isect+1]
+        }
     }
 
-    if(converged != 0x3) {
-        return false;
-    }
-
-    double threshold_t = threshold / vmax;
-    if(t1 - t0 > threshold_t) {
-        // XXX: two intercepts, split range in two
-    }
-
-    return true;
+    return intercepts != 0; // XXX: return value
 }
 
 bool intercept_orbit(
