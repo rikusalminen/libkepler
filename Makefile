@@ -8,8 +8,8 @@ CFLAGS+=-O0 -g -ggdb
 CFLAGS+=-DDEBUG
 endif
 CFLAGS+=-MMD  # generate dependency .d files
-LDLIBS=-lm -lkepler
-LDFLAGS=-L.
+LDLIBS=-lm
+LDFLAGS=
 
 SRCS= \
 	src/kepler.c \
@@ -81,7 +81,7 @@ endif
 -include $(DEPS)
 
 # implicit rules for building archives not parallel safe (e.g. make -j 3)
-%.a: ; ar rcs $@ $<
+%.a: ; ar rcs $@ $^
 
 # cscope.out
 cscope.out: $(SRCS)
