@@ -14,8 +14,10 @@ LDFLAGS=
 SRCS= \
 	src/kepler.c \
 	src/stumpff.c \
+	src/universal.c \
 	test/kepler_test.c \
 	test/stumpff_test.c \
+	test/universal_test.c \
 	test/numtest.c \
 	test/libkepler-test.c
 TARGETS= \
@@ -24,13 +26,15 @@ TARGETS= \
 
 libkepler.a: \
 	src/kepler.o \
-	src/stumpff.o
+	src/stumpff.o \
+	src/universal.o
 
 test/libkepler-test: \
 	test/libkepler-test.o \
 	test/numtest.o \
 	test/kepler_test.o \
 	test/stumpff_test.o \
+	test/universal_test.o \
 	libkepler.a
 
 TEST_SUITE=test/libkepler-test
