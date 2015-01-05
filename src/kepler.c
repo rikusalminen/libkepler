@@ -3,6 +3,7 @@
 #include <float.h>
 
 #include <libkepler/kepler.h>
+#include <libkepler/anomaly.h>
 
 static void cross(const double *a, const double *b, double *c) {
     c[0] = a[1]*b[2] - a[2]*b[1];
@@ -50,108 +51,6 @@ static void matrix_vector_product(const double *m, const double *v, double *x) {
             //x[i] += m[3 * j + i] * v[j];
         }
     }
-}
-
-static inline double kepler_iter1(double e, double M, double x) {
-    return M + e * sin(x);
-}
-
-static inline double kepler_iter2(double e, double M, double x) {
-    return x + (M + e * sin(x) - x) / (1.0 - e * cos(x));
-}
-
-static inline double kepler_iter3(double e, double M, double x) {
-    double s = e * sin(x);
-    double c = e * cos(x);
-    double f0 = x - s - M;
-    double f1 = 1.0 - c;
-    double f2 = s;
-
-    return x + (-5.0) * f0 / (f1 + sign(f1) * sqrt(fabs(16.0 * f1 * f1 - 20.0 * f0 * f2)));
-}
-
-static inline double kepler_iter4(double e, double M, double x) {
-    double s = e * sinh(x);
-    double c = e * cosh(x);
-    double f0 = s - x - M;
-    double f1 = c - 1.0;
-    double f2 = s;
-
-    return x + (-5.0) * f0 / (f1 + sign(f1) * sqrt(fabs(16.0 * f1 * f1 - 20.0 * f0 * f2)));
-}
-
-double kepler_anomaly_mean_to_eccentric(double e, double M) {
-    if(zero(e - 1.0)) {
-        // parabolic anomaly
-        double x = pow(sqrt(9.0*M*M + 1.0) + 3.0*M, 1.0/3.0);
-        return x - 1.0/x;
-    }
-
-    typedef double (*iter_func)(double, double, double);
-    iter_func iter = 0;
-    if(e < 0.3) iter = kepler_iter1;
-    else if(e < 0.9) iter = kepler_iter2;
-    else if(e < 1.0) iter = kepler_iter3;
-    else iter = kepler_iter4;   // e > 1.0
-
-    int num_steps = 1;
-    if(e > 0.0 && e < 0.3) num_steps = 10;
-    else if(e < 0.9) num_steps = 20;
-    else if(e < 1.0) num_steps = 20;
-    else num_steps = 31;    // e > 1.0
-
-    double threshold = DBL_EPSILON;
-
-    double x = M, x0 = x;
-    do {
-        x0 = x;
-        x = iter(e, M, x);
-    } while(--num_steps && (x0-x)*(x0-x) > threshold);
-
-    return x;
-}
-
-double kepler_anomaly_eccentric_to_mean(double e, double E) {
-    if(zero(e - 1.0))
-        // parabolic anomaly
-        return E*E*E/6.0 + E/2.0;
-    if(e > 1.0)
-        return e * sinh(E) - E;
-    return E - e * sin(E);
-}
-
-double kepler_anomaly_eccentric_to_true(double e, double E) {
-    if(zero(e - 1.0))
-        return 2.0 * atan(E);
-    if(e > 1.0)
-        return 2.0 * atan(sqrt((e+1.0) / (e-1.0)) * tanh(E/2.0));
-
-    return atan2(sqrt(1.0-e*e) * sin(E), cos(E) - e);
-}
-
-double kepler_anomaly_true_to_eccentric(double e, double f) {
-    if(zero(e - 1.0))
-        return tan(f / 2.0);
-    if(e > 1.0)
-        return sign(f) * acosh((e + cos(f)) / (1.0 + e * cos(f)));
-
-    return atan2(sqrt(1.0-e*e) * sin(f), cos(f) + e);
-}
-
-double kepler_anomaly_true_to_mean(double e, double f) {
-    return kepler_anomaly_eccentric_to_mean(e, kepler_anomaly_true_to_eccentric(e, f));
-}
-
-double kepler_anomaly_mean_to_true(double e, double M) {
-    return kepler_anomaly_eccentric_to_true(e, kepler_anomaly_mean_to_eccentric(e, M));
-}
-
-double kepler_anomaly_dEdM(double e, double E) {
-    if(zero(e - 1.0))
-        return 2.0 / (E*E + 1.0);
-    if(e > 1.0)
-        return 1.0 / (e*cosh(E) - 1.0);
-    return 1.0 / (1.0 - e * cos(E));
 }
 
 bool kepler_orbit_parabolic(const struct kepler_elements *elements) {
@@ -392,7 +291,7 @@ void kepler_elements_from_state(
             acos(clamp(-1.0, 1.0, dot(ecc, pos) / (e * r)));
 
     // mean anomaly at epoch
-    double M0 = kepler_anomaly_true_to_mean(e, f);
+    double M0 = anomaly_true_to_mean(e, f);
 
     // mean motion
     double a = p / (1.0 - e*e);
@@ -444,7 +343,7 @@ void kepler_elements_to_state_E(
     double b = kepler_orbit_semi_minor_axis(elements);
     double n = elements->mean_motion;
 
-    double Edot = n * kepler_anomaly_dEdM(e, E);
+    double Edot = n * anomaly_dEdM(e, E);
 
     double x, y, vx, vy;
     if(kepler_orbit_parabolic(elements)) {
@@ -484,7 +383,7 @@ void kepler_elements_to_state_t(
     double M = kepler_orbit_mean_anomaly_at_time(elements, t);
 
     // eccentric anomaly
-    double E = kepler_anomaly_mean_to_eccentric(elements->eccentricity, M);
+    double E = anomaly_mean_to_eccentric(elements->eccentricity, M);
 
     // position and velocity in orbital plane
     double pos2d[3], vel2d[3];

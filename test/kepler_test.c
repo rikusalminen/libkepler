@@ -1,6 +1,7 @@
 #include <math.h>
 #include <stdbool.h>
 
+#include <libkepler/anomaly.h>
 #include <libkepler/kepler.h>
 
 #include "numtest.h"
@@ -61,58 +62,6 @@ static void rotation_matrix_euler(double rx, double ry, double rz, double *m)
     m[6] = cs[0]*sn[1]*cs[2] + sn[0]*sn[2];
     m[7] = cs[0]*sn[1]*sn[2] - sn[0]*cs[2];
     m[8] = cs[0]*cs[1];
-}
-
-void anomaly_test(double *params, int num_params, void *extra_args, struct numtest_ctx *test_ctx) {
-    (void)extra_args;
-
-    ASSERT(num_params == 2, "num_params");
-
-    double e = params[0] * 4.0;
-    double t = -1.0 + params[1] * 2.0;
-
-    double maxf = e > 1.0 ?
-        acos(1.0/e) :       // hyperbolic
-        (ZEROF(e-1.0) ?
-            4*M_PI/5 :      // parabolic
-            M_PI);          // closed orbit
-    double maxE = kepler_anomaly_true_to_eccentric(e, maxf);
-    double maxM = kepler_anomaly_eccentric_to_mean(e, maxE);
-
-    double M = t * maxM;
-    double E = t * maxE;
-    double f = t * maxf;
-
-    double f2 = kepler_anomaly_eccentric_to_true(e, E);
-    ASSERT_RANGEF(f2, -maxf, maxf, "True anomaly within range");
-    ASSERT_EQF(E, kepler_anomaly_true_to_eccentric(e, f2), "Eccentric -> True");
-
-    double E2 = kepler_anomaly_true_to_eccentric(e, f);
-    ASSERT_RANGEF(E2, -maxE, maxE, "Eccentric anomaly within range");
-    ASSERT_EQF(f, kepler_anomaly_eccentric_to_true(e, E2), "True -> Eccentric");
-
-    double E3 = kepler_anomaly_mean_to_eccentric(e, M);
-    ASSERT_RANGEF(E3, -maxE, maxE, "Eccentric anomaly within range");
-    ASSERT_EQF(M, kepler_anomaly_eccentric_to_mean(e, E3), "True -> Eccentric");
-
-    double M2 = kepler_anomaly_eccentric_to_mean(e, E);
-    ASSERT_RANGEF(M2, -maxM, maxM, "Mean anomaly within range");
-    ASSERT_EQF(E, kepler_anomaly_mean_to_eccentric(e, M2), "Eccentric -> Mean");
-
-    double M3 = kepler_anomaly_true_to_mean(e, f);
-    ASSERT_RANGEF(M3, -maxM, maxM, "Mean anomaly within range");
-    ASSERT_EQF(f, kepler_anomaly_mean_to_true(e, M3), "True -> Mean");
-
-    double f3 = kepler_anomaly_mean_to_true(e, M);
-    ASSERT_RANGEF(f3, -maxf, maxf, "True anomaly within range");
-    ASSERT_EQF(M, kepler_anomaly_true_to_mean(e, f3), "Mean -> True");
-
-    double dEdM = kepler_anomaly_dEdM(e, E);
-    double MM = kepler_anomaly_eccentric_to_mean(e, E);
-    double dM = 1.0e-10 * maxM;
-    double Eplus = kepler_anomaly_mean_to_eccentric(e, MM+dM);
-    double Eminus = kepler_anomaly_mean_to_eccentric(e, MM-dM);
-    ASSERT_EQF(dEdM * 2.0 * dM, (Eplus-Eminus), "dE/dM");
 }
 
 void orbit_from_state_test(double *params, int num_params, void *extra_args, struct numtest_ctx *test_ctx) {
@@ -324,8 +273,8 @@ void orbit_from_state_test(double *params, int num_params, void *extra_args, str
     {
         double pos2[3], vel2[3];
         double M = kepler_orbit_mean_anomaly_at_time(&elements, t0);
-        double E = kepler_anomaly_mean_to_eccentric(elements.eccentricity, M);
-        double f = kepler_anomaly_eccentric_to_true(elements.eccentricity, E);
+        double E = anomaly_mean_to_eccentric(elements.eccentricity, M);
+        double f = anomaly_eccentric_to_true(elements.eccentricity, E);
 
         ASSERT(ZEROF(e2) ||
             (ZEROF(f0*f0) && ZEROF(f*f)) ||
@@ -374,9 +323,9 @@ void orbit_from_elements_test(double *params, int num_params, void *extra_args, 
 
     double x1 = -1.0 + params[3] * 2.0;
     double f1 = maxf * x1;
-    double E1 = kepler_anomaly_true_to_eccentric(e, f1);
+    double E1 = anomaly_true_to_eccentric(e, f1);
     double t1 = kepler_orbit_periapsis_time(&elements) +
-        kepler_anomaly_eccentric_to_mean(e, E1) / n;
+        anomaly_eccentric_to_mean(e, E1) / n;
 
     const int states_size = 2 * 2 * 3; // 2 x position,velocity x vec3
     double state_data[states_size];
@@ -437,7 +386,7 @@ void orbit_from_elements_test(double *params, int num_params, void *extra_args, 
         }
 
         double epoch = elements.periapsis_time +
-            kepler_anomaly_true_to_mean(e, f1) / n;
+            anomaly_true_to_mean(e, f1) / n;
 
         struct kepler_elements e2;
         kepler_elements_from_state(mu, pos, vel, epoch, &e2);
@@ -473,11 +422,11 @@ void orbit_from_elements_test(double *params, int num_params, void *extra_args, 
             double M1 = kepler_orbit_mean_anomaly_at_time(&e2, epoch);
 
             if(pass == 0) {
-                double ff = kepler_anomaly_mean_to_true(e2.eccentricity, M1);
+                double ff = anomaly_mean_to_true(e2.eccentricity, M1);
                 ASSERT_EQF(ff, f1,
                     "Open orbits periapsis time identity");
             } else {
-                double EE = kepler_anomaly_mean_to_eccentric(e2.eccentricity, M1);
+                double EE = anomaly_mean_to_eccentric(e2.eccentricity, M1);
                 ASSERT_EQF(EE, E1,
                     "Open orbits periapsis time identity");
             }

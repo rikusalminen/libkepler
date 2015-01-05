@@ -13,14 +13,6 @@ struct kepler_elements {
     double periapsis_time;
 };
 
-double kepler_anomaly_mean_to_eccentric(double e, double M);
-double kepler_anomaly_eccentric_to_mean(double e, double E);
-double kepler_anomaly_eccentric_to_true(double e, double E);
-double kepler_anomaly_true_to_eccentric(double e, double f);
-double kepler_anomaly_true_to_mean(double e, double f);
-double kepler_anomaly_mean_to_true(double e, double M);
-double kepler_anomaly_dEdM(double e, double E);
-
 bool kepler_orbit_parabolic(const struct kepler_elements *elements);
 bool kepler_orbit_hyperbolic(const struct kepler_elements *elements);
 bool kepler_orbit_closed(const struct kepler_elements *elements);
