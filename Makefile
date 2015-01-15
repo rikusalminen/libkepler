@@ -14,8 +14,10 @@ LDFLAGS=
 SRCS= \
 	src/kepler.c \
 	src/anomaly.c \
+	src/true_anomaly.c \
 	test/kepler_test.c \
 	test/anomaly_test.c \
+	test/true_anomaly_test.c \
 	test/numtest.c \
 	test/libkepler-test.c
 TARGETS= \
@@ -24,6 +26,7 @@ TARGETS= \
 
 libkepler.a: \
 	src/anomaly.o \
+	src/true_anomaly.o \
 	src/kepler.o
 
 test/libkepler-test: \
@@ -31,6 +34,7 @@ test/libkepler-test: \
 	test/numtest.o \
 	test/kepler_test.o \
 	test/anomaly_test.o \
+	test/true_anomaly_test.o \
 	libkepler.a
 
 TEST_SUITE=test/libkepler-test
