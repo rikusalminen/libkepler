@@ -13,10 +13,12 @@ LDFLAGS=
 
 SRCS= \
 	src/kepler.c \
+	src/conic.c \
 	src/anomaly.c \
 	src/true_anomaly.c \
 	src/eccentric_anomaly.c \
 	test/kepler_test.c \
+	test/conic_test.c \
 	test/anomaly_test.c \
 	test/true_anomaly_test.c \
 	test/eccentric_anomaly_test.c \
@@ -27,6 +29,7 @@ TARGETS= \
 	test/libkepler-test
 
 libkepler.a: \
+	src/conic.o \
 	src/anomaly.o \
 	src/true_anomaly.o \
 	src/eccentric_anomaly.o \
@@ -36,6 +39,7 @@ test/libkepler-test: \
 	test/libkepler-test.o \
 	test/numtest.o \
 	test/kepler_test.o \
+	test/conic_test.o \
 	test/anomaly_test.o \
 	test/true_anomaly_test.o \
 	test/eccentric_anomaly_test.o \
