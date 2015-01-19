@@ -11,11 +11,17 @@ CFLAGS+=-MMD  # generate dependency .d files
 LDLIBS=-lm
 LDFLAGS=
 
+# Silence GCC warnings and notes about AVX ABI and parameter alignment
+# They are spurious when __attribute__((always_inline)) is used
+CFLAGS+=-Wno-psabi
+
 SRCS= \
 	src/kepler.c \
 	src/conic.c \
+	src/orientation.c \
 	test/kepler_test.c \
 	test/conic_test.c \
+	test/orientation_test.c \
 	test/numtest.c \
 	test/libkepler-test.c
 TARGETS= \
@@ -24,12 +30,14 @@ TARGETS= \
 
 libkepler.a: \
 	src/conic.o \
+	src/orientation.o \
 	src/kepler.o
 
 test/libkepler-test: \
 	test/libkepler-test.o \
 	test/numtest.o \
 	test/kepler_test.o \
+	test/orientation_test.o \
 	test/conic_test.o \
 	libkepler.a
 
