@@ -22,12 +22,14 @@ SRCS= \
 	src/true_anomaly.c \
 	src/eccentric_anomaly.c \
 	src/orientation.c \
+	src/orbit.c \
 	test/kepler_test.c \
 	test/conic_test.c \
 	test/anomaly_test.c \
 	test/true_anomaly_test.c \
 	test/eccentric_anomaly_test.c \
 	test/orientation_test.c \
+	test/orbit_test.c \
 	test/numtest.c \
 	test/libkepler-test.c
 TARGETS= \
@@ -40,6 +42,7 @@ libkepler.a: \
 	src/true_anomaly.o \
 	src/eccentric_anomaly.o \
 	src/orientation.o \
+	src/orbit.o \
 	src/kepler.o
 
 test/libkepler-test: \
@@ -51,6 +54,7 @@ test/libkepler-test: \
 	test/true_anomaly_test.o \
 	test/eccentric_anomaly_test.o \
 	test/orientation_test.o \
+	test/orbit_test.o \
 	libkepler.a
 
 TEST_SUITE=test/libkepler-test

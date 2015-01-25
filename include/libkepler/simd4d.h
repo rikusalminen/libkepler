@@ -36,6 +36,11 @@ static inline vec4d cross(vec4d a, vec4d b) {
         0.0 };
 }
 
+static inline vec4d xyz4d(vec4d a) __attribute__((always_inline));
+static inline vec4d xyz4d(vec4d a) {
+    return (vec4d){ a[0], a[1], a[2], 0.0 };
+}
+
 #else // GCC > 4.7 or Clang required (__builtin_shuffle)
 
 static inline vec4d dot(vec4d a, vec4d b) __attribute__((always_inline));
@@ -52,6 +57,12 @@ static inline vec4d cross(vec4d a, vec4d b) {
         - shuffle4d(a, a, 2, 0, 1, 3) * shuffle4d(b, b, 1, 2, 0, 3);
 }
 
+static inline vec4d xyz4d(vec4d a) __attribute__((always_inline));
+static inline vec4d xyz4d(vec4d a) {
+    const vec4d zero = { 0.0, 0.0, 0.0, 0.0 };
+    return shuffle4d(a, zero, 0, 1, 2, 7);
+}
+
 #endif
 
 static inline vec4d mag(vec4d a) __attribute__((always_inline));
@@ -59,15 +70,16 @@ static inline vec4d mag(vec4d a) {
     return splat4d(sqrt(dot(a, a)[0]));
 }
 
-static inline vec4d unit(vec4d a) __attribute__((always_inline));
-static inline vec4d unit(vec4d a) {
+static inline vec4d unit4d(vec4d a) __attribute__((always_inline));
+static inline vec4d unit4d(vec4d a) {
     return a / mag(a);
 }
 
 static inline int eqv4d(vec4d a, vec4d b) __attribute__((always_inline));
 static inline int eqv4d(vec4d a, vec4d b) {
-    return ((dot(a,a)[0] < DBL_EPSILON && dot(b,b)[0] < DBL_EPSILON) ||
-        (dot(a-b, a-b)[0]/(dot(a, a) + dot(b, b))[0]) < DBL_EPSILON);
+    double threshold = 1.0e-15; // DBL_EPSILON;
+    return ((dot(a,a)[0] < threshold && dot(b,b)[0] < threshold) ||
+        (dot(a-b, a-b)[0]/(dot(a, a) + dot(b, b))[0]) < threshold);
 }
 
 #endif
