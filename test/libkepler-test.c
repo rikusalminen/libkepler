@@ -10,6 +10,7 @@ extern numtest_callback
     eccentric_anomaly_test,
     orbit_from_state_test_new,
     orbit_from_elements_test_new,
+    orbit_radial_test,
     dummy_test;
 
 const struct numtest_case numtest_cases[] = {
@@ -22,6 +23,7 @@ const struct numtest_case numtest_cases[] = {
     { "eccentric_anomaly", eccentric_anomaly_test, 4, 0 },
     { "orbit_from_state_new", orbit_from_state_test_new, 7, 0 },
     { "orbit_from_elements_new", orbit_from_elements_test_new, 6, 0 },
+    { "orbit_radial", orbit_radial_test, 5, 0 },
     { 0, 0, 0, 0 }
 };
 

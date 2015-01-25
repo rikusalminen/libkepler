@@ -204,3 +204,62 @@ void orbit_from_elements_test_new(
         conic_specific_angular_momentum(mu, p, e),
         "Orbit specific angular momentum");
 }
+
+void orbit_radial_test(
+    double *params,
+    int num_params,
+    void *extra_args,
+    struct numtest_ctx *test_ctx) {
+    (void)extra_args;
+    ASSERT(num_params == 5, "");
+
+    double mu = 1.0 + params[0] * 1.0e10;
+    double r = params[1] * 1.0e10;
+    double coeff = params[2];
+    double t0 = 0.0;
+
+    double ry = (-1.0 + 2.0 * params[3]) * M_PI;
+    double rz = (-1.0 + 2.0 * params[4]) * M_PI;
+
+    vec4d major_axis = {
+        cos(ry)*cos(rz),
+        cos(ry)*sin(rz),
+        -sin(ry),
+        0.0 };
+
+    double v = zero(r) ?
+        coeff * sqrt(2.0 * mu) :
+        (0.5 + coeff) * sqrt(2.0 * mu/r);
+
+    vec4d pos = splat4d(r) * major_axis + (vec4d){ 0.0, 0.0, 0.0, 1.0 };
+    vec4d vel = splat4d(v) * major_axis;
+
+    struct orbit orbit;
+    orbit_from_state(&orbit, mu, pos, vel, t0);
+
+    ASSERT(orbit_radial(&orbit),
+        "Orbit is radial");
+    ASSERT(orbit_zero(&orbit) == zero(r),
+        "Orbit is zero iff position is zero");
+
+    ASSERT(ZEROF(dot(orbit.major_axis, orbit.minor_axis)[0]) &&
+        ZEROF(dot(orbit.major_axis, orbit.normal_axis)[0]) &&
+        ZEROF(dot(orbit.minor_axis, orbit.normal_axis)[0]),
+        "Axes are orthogonal");
+
+    ASSERT(ZEROF(orbit_angular_momentum(&orbit)),
+        "Radial trajectory orbit has zero angular momentum");
+
+    if(orbit_zero(&orbit))
+        return;
+
+
+    ASSERT(eqv4d(major_axis, orbit.major_axis),
+        "Radial trajectory major axis");
+
+    double visviva = v*v/2.0 - mu/r;
+    ASSERT_EQF(visviva, orbit_orbital_energy(&orbit),
+        "Radial trajectory energy");
+
+    // TODO: implement and test radial trajectories
+}
